@@ -1,0 +1,437 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[margin=1in]{geometry}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\R}{\mathbb R}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\A}{\mathcal A}
+\newcommand{\V}{\mathcal V}
+\newcommand{\dd}{\mathrm d}
+\newcommand{\grad}{\operatorname{grad}}
+\newcommand{\inner}[2]{\left\langle #1,#2\right\rangle_Q}
+\newcommand{\normQ}[1]{\left\lVert #1\right\rVert_Q}
+
+\title{An Explicit Affine-Chart Proof of\\
+Veronese Penalty Coercivity\\
+\large Companion to the Lean formalization}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We give a self-contained proof of the local inequality
+\[
+  \normQ{\grad_{S_Q}W(y)}^2\geq c\,W(y)
+\]
+for the complete sum-of-squares penalty of the degree-\(k\) Veronese
+cone.  The usual proof invokes the Morse--Bott lemma and a tubular
+neighborhood.  Here we instead use an explicit affine reconstruction of
+the cone and a normalized bad-sequence argument.  This is both elementary
+and close to the accompanying Lean development.  The proof also shows
+that the tube radius and coercivity constant may be chosen to be the
+same reciprocal integer.
+\end{abstract}
+
+\section{The penalty and its spherical gradient}
+
+Fix integers \(n\geq 0\) and \(k\geq 1\).  Let
+\[
+  \A_k=\left\{\alpha\in\mathbb N^n:
+      |\alpha|:=\sum_{\ell=1}^n\alpha_\ell=k\right\},
+  \qquad E=\R^{\A_k}.
+\]
+The degree-\(k\) Veronese map is
+\[
+  \nu_k:\R^n\longrightarrow E,\qquad
+  \nu_k(x)_\alpha=x^\alpha.
+\]
+Put
+\[
+  Q(y)=\sum_{\alpha\in\A_k}
+      {k\choose\alpha}y_\alpha^2,
+  \qquad
+  \inner uv=\sum_{\alpha\in\A_k}
+      {k\choose\alpha}u_\alpha v_\alpha.
+\]
+Thus \(Q(y)=\normQ y^2\), and \(Q\) is positive definite.
+
+A \emph{balanced quadratic relation} is a quadruple
+\(r=(\alpha,\beta,\gamma,\delta)\in\A_k^4\) with
+\(\alpha+\beta=\gamma+\delta\).  Write
+\[
+  q_r(y)=y_\alpha y_\beta-y_\gamma y_\delta.
+\]
+We use every balanced quadruple; redundancy is harmless and makes the
+family completely explicit.  Its common zero set is the real affine
+Veronese cone
+\[
+  \V=\{y:q_r(y)=0\text{ for every }r\}.
+\]
+The complete constraint energy is
+\[
+  W(y)=\sum_r q_r(y)^2.
+\]
+In particular,
+\[
+  W(y)\geq0,\qquad W(y)=0\Longleftrightarrow y\in\V.
+\]
+
+Let \(S_Q=\{y:Q(y)=1\}\).  Denote the ambient gradient for the
+\(Q\)-metric by \(\grad_QW\).  Since \(W\) is homogeneous of degree
+four, Euler's identity gives
+\[
+  \grad_{S_Q}W(y)=\grad_QW(y)-4W(y)y
+  \quad (y\in S_Q).
+\]
+Set
+\[
+  D(y)=\normQ{\grad_{S_Q}W(y)}^2.
+\]
+
+\begin{theorem}[Veronese penalty coercivity]\label{thm:coercivity}
+There is an integer \(m\geq0\) such that, with
+\[
+  \varepsilon_m=\frac1{m+1},
+\]
+one has
+\[
+  Q(y)=1,\qquad W(y)\leq\varepsilon_m
+  \quad\Longrightarrow\quad
+  \varepsilon_m W(y)\leq D(y).
+\]
+Consequently the local Morse--Bott inequality holds with positive
+rational constants \(c=\eta=\varepsilon_m\).
+\end{theorem}
+
+\section{An explicit affine reconstruction}
+
+Fix a coordinate \(i\in\{1,\dots,n\}\).  Let
+\[
+  b=ke_i,\qquad
+  b_j=(k-1)e_i+e_j.
+\]
+When \(y_b\neq0\), define affine source coordinates
+\[
+  x_j(y)=\frac{y_{b_j}}{y_b}
+\]
+and reconstruct a cone point by
+\[
+  C_i(y)=y_b\,\nu_k(x(y)).
+  \tag{1}\label{eq:chart}
+\]
+
+\begin{lemma}[Chart identities]\label{lem:chart}
+Whenever \(y_b\neq0\), the reconstruction \(C_i(y)\) has the following
+properties.
+\begin{enumerate}
+\item \(C_i(y)\in\V\).
+\item \(C_i(y)_{b_j}=y_{b_j}\) for every \(j\), including \(j=i\),
+      for which \(b_i=b\).
+\item If \(y\in\V\), then \(C_i(y)=y\).
+\item The map \(C_i\) is continuous at every point where \(y_b\neq0\).
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+The first assertion follows because \(C_i(y)\) is a scalar multiple of
+a Veronese point and every \(q_r\) is homogeneous quadratic.  For the
+second, \(x_i(y)=1\), and hence
+\[
+  \nu_k(x(y))_{b_j}=x_i(y)^{k-1}x_j(y)=x_j(y).
+\]
+Multiplication by \(y_b\) recovers \(y_{b_j}\).
+
+For the third assertion, repeatedly use the balanced relation
+\[
+  \alpha+ke_i
+   =(\alpha+e_i-e_j)+((k-1)e_i+e_j)
+  \tag{2}\label{eq:transfer}
+\]
+whenever \(\alpha_j>0\) and \(j\neq i\).  It determines \(y_\alpha\)
+from a coordinate with one more unit in its \(i\)-th exponent.  Induction
+on \(k-\alpha_i\) eventually reaches the pure coordinate \(ke_i\), and
+gives
+\[
+  y_\alpha=y_b\,x(y)^\alpha=C_i(y)_\alpha.
+\]
+Finally, every coordinate in \eqref{eq:chart} is a finite product of
+powers of quotients with common denominator \(y_b\), so it is continuous
+where that denominator is nonzero.
+\end{proof}
+
+Define the chart error
+\[
+  e_i(y)=y-C_i(y).
+\]
+By Lemma~\ref{lem:chart},
+\[
+  e_i(y)_{b_j}=0\qquad\text{for every }j.
+  \tag{3}\label{eq:gauge}
+\]
+Moreover, \(e_i(y)=0\) implies \(y=C_i(y)\in\V\), so
+\[
+  W(y)>0\quad\Longrightarrow\quad e_i(y)\neq0.
+  \tag{4}\label{eq:error-nonzero}
+\]
+
+\section{The chart-gauged differential kernel}
+
+The differential of \(q_r\) at \(p\), in direction \(h\), is denoted
+\(\dd q_r(p)h\).
+
+\begin{lemma}[Trivial chart-gauged kernel]\label{lem:kernel}
+Let \(p,h\in E\), suppose \(p_b\neq0\), and assume
+\[
+  h_{b_j}=0\quad\text{for every }j,
+  \qquad
+  \dd q_r(p)h=0\quad\text{for every balanced }r.
+\]
+Then \(h=0\).
+\end{lemma}
+
+\begin{proof}
+We prove \(h_\alpha=0\) by strong induction on
+\(d(\alpha)=k-\alpha_i\).  If \(d(\alpha)=0\), then
+\(\alpha=ke_i=b=b_i\), and the result is one of the chart-coordinate
+assumptions.
+
+Suppose \(d(\alpha)>0\).  Some \(j\neq i\) has \(\alpha_j>0\).  Put
+\[
+  \alpha'=\alpha+e_i-e_j.
+\]
+The defect of \(\alpha'\) is one smaller, so \(h_{\alpha'}=0\) by
+induction.  Apply the differential hypothesis to the transfer relation
+\eqref{eq:transfer}.  It reads
+\[
+  h_\alpha p_b+p_\alpha h_b
+   -h_{\alpha'}p_{b_j}-p_{\alpha'}h_{b_j}=0.
+\]
+The last three terms vanish: \(h_b=h_{b_j}=0\) by the chart gauge, and
+\(h_{\alpha'}=0\) by induction.  Thus \(h_\alpha p_b=0\).  Since
+\(p_b\neq0\), we obtain \(h_\alpha=0\).
+\end{proof}
+
+\begin{remark}
+No smooth-manifold, tangent-space, or scheme-theoretic statement is
+hidden in Lemma~\ref{lem:kernel}.  The point \(p\) is not even required
+to lie in \(\V\).  The lemma is a finite coordinate induction using the
+specific balanced quadrics \eqref{eq:transfer}.
+\end{remark}
+
+\section{Proof of coercivity}
+
+\begin{proof}[Proof of Theorem~\ref{thm:coercivity}]
+Assume the conclusion is false.  For every \(m\geq0\), choose \(y_m\)
+such that
+\[
+  Q(y_m)=1,\qquad
+  W(y_m)\leq\varepsilon_m,\qquad
+  D(y_m)<\varepsilon_m W(y_m).
+  \tag{5}\label{eq:bad}
+\]
+Since \(D\geq0\), the last strict inequality implies \(W(y_m)>0\).
+Also \(\varepsilon_m\to0\), hence \(W(y_m)\to0\).
+
+\paragraph{First compactness step.}
+The ellipsoid \(S_Q\) is compact.  After passing to a subsequence,
+\[
+  y_m\longrightarrow p\in S_Q.
+\]
+Continuity gives \(W(p)=0\), so \(p\in\V\).  Since \(Q(p)=1\), the point
+\(p\) is nonzero.  A nonzero point of the real Veronese cone has a
+nonzero pure coordinate; choose \(i\) so that \(p_b\neq0\), with
+\(b=ke_i\).  After discarding finitely many terms, \(y_{m,b}\neq0\) for
+every \(m\).
+
+\paragraph{Normalize the chart error.}
+Write
+\[
+  C_m=C_i(y_m),\qquad e_m=y_m-C_m,\qquad
+  \rho_m=\sqrt{Q(e_m)},\qquad v_m=\rho_m^{-1}e_m.
+  \tag{6}\label{eq:normalize}
+\]
+Because \(W(y_m)>0\), equation \eqref{eq:error-nonzero} shows
+\(e_m\neq0\), so \(\rho_m>0\).  The normalization gives
+\[
+  Q(v_m)=1,\qquad (v_m)_{b_j}=0\quad\text{for every }j.
+  \tag{7}\label{eq:normalized-properties}
+\]
+The chart is continuous at \(p\) and fixes \(p\).  Therefore
+\[
+  C_m\to p,\qquad e_m\to0,\qquad \rho_m\to0.
+\]
+Compactness of \(S_Q\) gives a second subsequence for which
+\[
+  v_m\longrightarrow v,\qquad
+  Q(v)=1,\qquad v_{b_j}=0\quad\text{for every }j.
+  \tag{8}\label{eq:v-limit}
+\]
+
+\paragraph{Normalize the quadratic relations.}
+For each balanced relation \(r\), put
+\[
+  A_{m,r}=\frac{q_r(y_m)}{\rho_m},
+  \qquad
+  a_r=\dd q_r(p)v.
+\]
+The exact quadratic Taylor formula is
+\[
+  q_r(C_m+e_m)
+   =q_r(C_m)+\dd q_r(C_m)e_m+q_r(e_m).
+\]
+Here \(q_r(C_m)=0\) and \(e_m=\rho_m v_m\).  By linearity of the
+differential in its direction and quadratic homogeneity of \(q_r\),
+\[
+  A_{m,r}
+   =\dd q_r(C_m)v_m+\rho_m q_r(v_m)
+   \longrightarrow \dd q_r(p)v=a_r.
+  \tag{9}\label{eq:A-limit}
+\]
+Let
+\[
+  S_m=\sum_r A_{m,r}^2,\qquad S=\sum_r a_r^2.
+\]
+The relation family is finite, so \(S_m\to S\).  Directly from the
+definition,
+\[
+  W(y_m)=\rho_m^2S_m.
+  \tag{10}\label{eq:W-factor}
+\]
+
+\paragraph{The normalized spherical gradient tends to zero.}
+Let
+\[
+  s_m=\grad_{S_Q}W(y_m),\qquad t_m=\rho_m^{-1}s_m.
+\]
+Because \(Q(s_m)=D(y_m)\), equations
+\eqref{eq:bad} and \eqref{eq:W-factor} imply
+\[
+  Q(t_m)=\frac{D(y_m)}{\rho_m^2}
+  <\varepsilon_m S_m\longrightarrow0.
+  \tag{11}\label{eq:t-zero}
+\]
+Weighted Cauchy--Schwarz and \(Q(v_m)=1\) now give
+\[
+  |\inner{t_m}{v_m}|^2
+  \leq Q(t_m)Q(v_m)=Q(t_m),
+\]
+so
+\[
+  \inner{t_m}{v_m}\longrightarrow0.
+  \tag{12}\label{eq:t-pairing}
+\]
+
+\paragraph{Compute the same limit using the ambient gradient.}
+The ambient and spherical gradients satisfy
+\[
+  \grad_QW(y_m)=s_m+4W(y_m)y_m.
+\]
+Divide its pairing with \(v_m\) by \(\rho_m\).  Using
+\eqref{eq:W-factor},
+\[
+ \begin{aligned}
+  \frac{\inner{\grad_QW(y_m)}{v_m}}{\rho_m}
+   &=
+     \inner{t_m}{v_m}
+     +4\rho_m S_m\inner{y_m}{v_m}\\
+   &\longrightarrow0.
+ \end{aligned}
+ \tag{13}\label{eq:ambient-zero}
+\]
+Indeed, the first term tends to zero by \eqref{eq:t-pairing}; in the
+second, \(\rho_m\to0\), while \(S_m\) and
+\(\inner{y_m}{v_m}\) converge and are therefore bounded.
+
+On the other hand, differentiating the sum of squares gives the exact
+identity
+\[
+  \inner{\grad_QW(y_m)}{v_m}
+   =2\sum_r q_r(y_m)\,\dd q_r(y_m)v_m.
+\]
+After division by \(\rho_m\), equations \eqref{eq:A-limit} and
+\(y_m\to p,\ v_m\to v\) show that the left side of
+\eqref{eq:ambient-zero} also converges to
+\[
+  2\sum_r a_r^2=2S.
+\]
+Consequently \(S=0\), and hence
+\[
+  \dd q_r(p)v=a_r=0\qquad\text{for every }r.
+\]
+
+Finally, \(p_b\neq0\), all chart coordinates of \(v\) vanish by
+\eqref{eq:v-limit}, and all relation differentials annihilate \(v\).
+Lemma~\ref{lem:kernel} gives \(v=0\), contradicting \(Q(v)=1\).
+This contradiction proves the theorem.
+\end{proof}
+
+\section{Rational effectivity and the formalization boundary}
+
+Theorem~\ref{thm:coercivity} already produces positive rational
+constants: \(c=\eta=1/(m+1)\).  If one needs to find a valid pair from
+the polynomial data, enumerate positive rational pairs \((c,\eta)\) and
+decide the first-order sentence
+\[
+  \forall y\in E,\quad
+  Q(y)=1\ \wedge\ 0\leq W(y)\leq\eta
+  \ \Longrightarrow\ cW(y)\leq D(y).
+  \tag{14}\label{eq:qe}
+\]
+All expressions in \eqref{eq:qe} are rational polynomials, so the
+sentence is decidable by quantifier elimination for real closed fields;
+see, for example, \cite[Chapters 1 and 2]{BCR}.  Existence from
+Theorem~\ref{thm:coercivity} guarantees that the enumeration terminates.
+
+The Lean development formalizes the full analytic existence argument,
+including compactness, both subsequence extractions, every exact
+quadratic identity, and the final kernel contradiction.  The generic
+real-closed-field quantifier-elimination implementation used to turn
+\eqref{eq:qe} into an executable search is a separate computability
+interface; it is not silently assumed inside the coercivity theorem.
+
+\section{Guide to the Lean modules}
+
+The mathematical steps above correspond to the following reusable
+modules and declarations.
+\begin{itemize}
+\item \texttt{HGAS.Veronese.Conormal} packages the differential of the
+      Veronese map and the pure/adjacent coordinate identities.
+\item \texttt{HGAS.Veronese.AffineConeChart} defines
+      \texttt{affineConeChart} and \texttt{affineConeError}, proves the
+      chart identities and continuity, proves the exact quadratic
+      expansion, establishes weighted Cauchy--Schwarz, and proves
+      \texttt{eq\_zero\_of\_toricRelationDifferential\_eq\_zero\_of\_edge\_eq\_zero}.
+\item \texttt{HGAS.Veronese.MorseBottCoercivity} proves the normalized
+      bad-sequence contradiction and exposes the reciprocal-integer and
+      positive-constant coercivity theorems.
+\item \texttt{HGAS.Veronese.CubicLiftToricFactorization} supplies the
+      independent \(O(W)\) tangency estimate for the cubic lift by exact
+      ideal factorization.
+\item \texttt{HGAS.Veronese.TransverseStabilization} combines these two
+      estimates with the exact stabilization identities.
+\end{itemize}
+
+\begin{thebibliography}{9}
+
+\bibitem{BCR}
+J.~Bochnak, M.~Coste, and M.-F.~Roy,
+\emph{Real Algebraic Geometry},
+Ergebnisse der Mathematik und ihrer Grenzgebiete, vol.~36,
+Springer, 1998.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,2785 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1.05in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{xurl}
+\DeclareUnicodeCharacter{2082}{\ensuremath{_2}}
+\DeclareUnicodeCharacter{2083}{\ensuremath{_3}}
+\DeclareUnicodeCharacter{2084}{\ensuremath{_4}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=green!35!black,
+  urlcolor=blue!55!black
+}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\emergencystretch}{3em}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\R}{\mathbb R}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\N}{\mathbb N}
+\newcommand{\HGAS}{\mathrm{HGAS}}
+\newcommand{\dd}{\,\mathrm d}
+\newcommand{\Lean}{\textsc{Lean}}
+\newcommand{\Mathlib}{\textsc{Mathlib}}
+\newcommand{\statusproved}{\textcolor{green!40!black}{\textbf{proved}}}
+\newcommand{\statusinterface}{\textcolor{orange!70!black}{\textbf{interface}}}
+\newcommand{\statusopen}{\textcolor{red!65!black}{\textbf{open}}}
+\newcommand{\leanname}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\leanmodule}[1]{\path{#1}}
+
+\title{\textbf{Homogeneous Polynomial GAS and Computability}\\
+  A Human-Readable Companion to the Lean Development}
+\author{Formalization project companion}
+\date{24 July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\begin{minipage}{0.91\textwidth}
+\textbf{Historical snapshot; superseded.}
+This document records an intermediate formalization state on 24 July 2026
+and intentionally preserves obligations that were open at that time.  It
+must not be used as the current theorem-status report.  The completed,
+audited proof companion is
+\path{lean/docs/hgas_sigma1_complete_formalization_companion.tex}.
+\end{minipage}}
+\end{center}
+
+\begin{abstract}
+This document explains the mathematical proof architecture implemented in
+the \Lean{} project \leanmodule{lean/HGAS}.  It is written for a reader with
+a graduate background in analysis, dynamical systems, algebra, and basic
+computability theory.  Its purpose is twofold: to make the formal proof
+readable without requiring familiarity with \Lean{}, and to identify the
+precise boundary between kernel-checked results and the integration theorems
+that remain to be formalized.
+
+The development already proves, without project-specific axioms, the exact
+definition and angular characterization of homogeneous global asymptotic
+stability, the computably enumerable upper bound in every fixed odd degree,
+an unconditional primitive-recursive MRDP-to-fixed-DQL source, the required
+clock and invariant-measure infrastructure, an ergodic-maximizer theorem for
+continuous real flows on compact metric spaces, a substantial modular and
+Jacobi theta theory (including the second-order Delta identity, global
+projective saturation, an effective ten-coordinate polynomial compiler,
+arbitrary finite-family complex realification, and an effective linked
+unary--Jacobi compiler on twenty-eight real coordinates), exact conversion
+between physical angular velocity in radians and additive-circle frequency
+in turns, an analytic coupled controller--phase flow with exact ODE
+semantics, and a complete ergodic classification of its clock marginals:
+the controller tuple is almost surely locked, the phase projection is
+semiconjugate to a constant rotation on that full-measure fibre, and the
+phase marginal is Haar after conversion to turns.
+On the finite-syntax side it now also proves a dynamically coupled
+two-controller linked-Jacobi compiler on thirty-six real coordinates, with
+controller/target bidegree at most \((3,8)\), ordinary total degree at most
+\(9\), and two literal fifty-eight-dimensional compact-pipeline instances.
+The provisional all-affine layout uses clearing exponent \(10\); the
+geometry-faithful mixed layout retains the four controller and phase
+circles as compact blocks, centrally compactifies only the linked block,
+and therefore uses the sharp affine clearing exponent \(8\), with global
+tangency even at the affine equator.  Further proved pieces include a
+primitive-recursive right-hand-side oscillator compiler, an exact
+classification of ergodic invariant probabilities for the corresponding
+resonant additive-torus oscillator as Haar measures on unique invariant
+graphs, a physical-clock detector-average theorem, conditional
+recurrent-measure classification along any supplied modular factor map, the
+algebraic and ODE portions of the compact accumulator compiler,
+component-restricted finite invariant graphs, the homogeneous product-sphere
+wrapper, effective odd-degree-to-cubic reduction, and effective cofinal
+dimension/degree propagation.
+
+The full lower-bound theorem is \emph{not yet claimed by the Lean
+development}.  Three central integration tasks remain visible: the
+Dani--Smillie/Hubbard--Miller horocycle classification in the exact quotient
+used here; the recurrent modular/Jacobi selector and its state-map and
+identification with the proved finite-skew-product interface (or a new
+nontrivial-cover lifting theorem); and composition of the now separate
+controller, phase, oscillator, detector, and linked-Jacobi layers into one
+canonical fixed-resource source family.  The last task still includes the
+source-specific invariant component and primitive for its positive graph,
+the final-layout tangency proof, and the ergodic nonzero-drift alternative.
+The coupled-controller Haar theorem itself is now complete; what remains is
+to identify the appropriate factor of the complete enlarged polynomial
+source with that analytic clock flow and with the detector/oscillator
+models.  The formal files represent the remaining inputs as propositions
+or certificate fields, never as axioms.
+\end{abstract}
+
+\tableofcontents
+
+\section{How to read the status of this document}
+
+There are three kinds of statements below.
+
+\begin{center}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.17\textwidth}
+                >{\raggedright\arraybackslash}p{0.74\textwidth}}
+\toprule
+\statusproved &
+A theorem whose proof is checked by the Lean kernel and whose source contains
+no \leanname{sorry}, \leanname{admit}, project \leanname{axiom}, or
+\leanname{unsafe} declaration.\\
+\statusinterface &
+A proved implication or a structure definition whose hypotheses deliberately
+name the remaining mathematical input.  Such a declaration is useful, but it
+does not prove that its hypotheses hold.\\
+\statusopen &
+A mathematical theorem or piece of source assembly still absent from the
+kernel-checked dependency chain.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This distinction is essential.  For example,
+\leanname{CanonicalCompactAccumulatorGap} is a well-designed structure with
+two fields, but the existence of an inhabitant for the universal arithmetic
+source is still open.  Similarly,
+\leanname{GammaTwoDaniSmillieTheorem} is the \emph{definition of a
+proposition}; it is not an asserted axiom and not yet a proved theorem.
+The theorems which take an argument
+\leanname{hDS : GammaTwoDaniSmillieTheorem} are therefore proved conditional
+implications, not proofs of that argument.
+
+At the time of this companion, every module described as proved has been
+built with warnings treated as errors; the integrated public surface is
+\leanmodule{lean/HGAS.lean}, while newly stabilized modules are also named
+explicitly below.  The intended final trust criterion is stronger than
+compilation:
+the headline theorem should depend only on the ordinary logical foundations
+reported by \Lean{}/\Mathlib{} (typically \leanname{propext},
+\leanname{Classical.choice}, and \leanname{Quot.sound}), and on no
+project-defined postulate.
+
+\subsection{The dependency chain at a glance}
+
+The upper-bound and lower-bound branches are logically independent:
+\[
+\begin{array}{c}
+\text{homogeneous GAS}
+ \Longrightarrow \text{finite rational Lyapunov certificate}
+ \Longrightarrow \HGAS_{\Q}(n,d)\text{ is c.e.}
+\\[4pt]
+\hline\\[-9pt]
+\text{universal halting}
+ \Longrightarrow \text{fixed DQL}
+ \Longrightarrow \boxed{\text{modular/Jacobi source assembly}}
+\\
+\Longrightarrow \text{compact accumulator sign}
+ \Longrightarrow \text{homogeneous wrapper}
+ \Longrightarrow \text{cubicization and padding}.
+\end{array}
+\]
+Everything outside the box is already represented by substantial proved
+modules.  The box contains the remaining selector/classification and
+canonical-source work, described precisely in Sections
+\ref{sec:open-classification} and \ref{sec:open-source}.  The finite
+unary--Jacobi code inside that future source is already compiled, including
+both its fifty-dimensional static compact-pipeline instance and its
+fifty-eight-dimensional dynamically controlled instances.  For the latter,
+both a valid all-affine layout and the preferred geometry-faithful mixed
+layout are compiled; the box denotes the missing dynamical assembly, not a
+missing sparse-polynomial translation.
+
+\section{The exact decision problem}
+\label{sec:problem}
+
+\subsection{Finite rational syntax}
+
+For fixed dimension \(n\), a polynomial field code is a finite list of
+rational monomials in each of \(n\) output coordinates.  Decoding gives a
+map
+\[
+ F:\R^n\longrightarrow\R^n.
+\]
+The syntax layer is finite: rational numbers, exponent vectors, and lists.
+The semantic layer contains real analysis, ODEs, and measures.  The
+separation is deliberate.  A compiler may inspect only the finite syntax;
+noncomputable objects such as flows or invariant measures may occur only in
+correctness proofs.
+
+The basic files are
+\leanmodule{HGAS/Foundation/FiniteCode.lean} and
+\leanmodule{HGAS/Foundation/FinitePolynomialCode.lean}.  The exact
+fixed-resource language is defined in
+\leanmodule{HGAS/Computability/HGASLanguage.lean} by
+\[
+\leanname{HGASQ n d F}
+\quad:\Longleftrightarrow\quad
+\begin{cases}
+\text{every decoded coordinate of \(F\) is homogeneous of degree \(d\),}\\
+0\text{ is globally asymptotically stable for the realized field.}
+\end{cases}
+\]
+Malformed codes are negative instances.  The Boolean homogeneity test and
+its correctness are
+\leanname{PolynomialFieldCode.homogeneous} and
+\leanname{PolynomialFieldCode.homogeneous_eq_true_iff}; its primitive
+recursiveness is
+\leanname{PolynomialFieldCode.homogeneous_primrec}.
+
+\subsection{GAS without a hidden completeness assumption}
+
+A polynomial ODE can have finite-time blow-up.  Thus one must not define
+GAS using a global flow that may not exist.  The file
+\leanmodule{HGAS/Dynamics/Stability.lean} starts instead with:
+\begin{align*}
+\leanname{IsForwardTrajectory}(F,\gamma,x_0)
+ &:\Longleftrightarrow
+ \gamma(0)=x_0\ \text{and}\ \dot\gamma(t)=F(\gamma(t))
+ \text{ for }t\geq0,\\
+\leanname{ForwardComplete}(F)
+ &:\Longleftrightarrow
+ \text{every initial point has a forward trajectory},\\
+\leanname{LyapunovStable}(F,0)
+ &:\Longleftrightarrow
+ \text{nearby initial points stay nearby},\\
+\leanname{GloballyAttractive}(F,0)
+ &:\Longleftrightarrow
+ \text{every forward trajectory tends to \(0\)}.
+\end{align*}
+The structure \leanname{GloballyAsymptoticallyStable F 0} contains all
+three properties.  Consequently, every later GAS theorem has genuinely
+proved forward completeness rather than assuming it through notation.
+
+\subsection{Polar and angular equations}
+
+Suppose
+\[
+F(r x)=r^{k+1}F(x),\qquad r\geq0.
+\]
+On the unit sphere define
+\[
+ a(u)=\langle u,F(u)\rangle,\qquad
+ Y(u)=F(u)-a(u)u.
+\]
+Then \(\langle u,Y(u)\rangle=0\), so \(Y\) is tangent to the sphere.  If
+\(x(t)=r(t)u(t)\), direct differentiation gives
+\[
+ \dot r=r^{k+1}a(u),\qquad
+ \dot u=r^kY(u).
+\]
+With angular time \(s\), defined by \(\dd s/\dd t=r^k\), these become
+\[
+ \frac{\dd u}{\dd s}=Y(u),\qquad
+ \frac{\dd}{\dd s}\log r=a(u).
+\]
+The second identity is the conceptual heart of the reduction.  Radial
+contraction is controlled by additive orbit integrals of \(a\) along the
+compact angular flow:
+\[
+\log\frac{r(s)}{r(0)}
+   =\int_0^s a(\phi_\sigma u_0)\,\dd\sigma.
+\]
+
+The algebraic definitions
+\leanname{innerRadialReward} and \leanname{innerAngularField} occur in
+\leanmodule{HGAS/Dynamics/AngularGAS.lean}; the physical and angular polar
+equations are proved there, including the logarithmic-radius derivative and
+the conversion back to physical time.
+
+\subsection{Uniform negative blocks and invariant probabilities}
+
+On a compact flow \(\phi\) with continuous reward \(a\), say that there is
+a uniform negative block if some \(T,c>0\) satisfy
+\[
+ \int_0^T a(\phi_t x)\,\dd t\leq-c
+ \qquad\text{for every }x.
+\]
+If no such block exists, increasingly long almost-nonnegative orbit
+segments produce occupation probabilities.  Compactness gives a weak
+limit; the endpoint error vanishes after division by the segment length,
+so the limit is invariant and has nonnegative \(a\)-average.  Conversely,
+integrating a uniform block against an invariant probability gives a
+strictly negative average.
+
+This argument is fully formalized in
+\leanmodule{HGAS/Dynamics/UniformNegativeBlocks.lean}.  Its key equivalences
+are
+\leanname{invariantAverage_neg_iff_uniformNegativeBlock} and
+\leanname{maximalInvariantAverage_neg_iff_uniformNegativeBlock}.  Existence
+of an invariant probability on a compact flow is proved by a
+Krylov--Bogolyubov argument in
+\leanmodule{HGAS/Dynamics/KrylovBogolyubov.lean}; compactness and attainment
+of extrema appear in
+\leanmodule{HGAS/Dynamics/InvariantProbabilityCompact.lean}.
+
+\subsection{Ergodic maximizers for the full real flow}
+\label{sec:ergodic-maximizer}
+
+For the compact-sign argument later in the construction, it is not enough
+merely to know that the largest invariant average is attained.  We want a
+maximizer satisfying the zero--one law for invariant measurable sets.
+The project uses the explicit full-flow definition
+\[
+\leanname{IsErgodicInvariantProbability}(\phi,\mu):
+\quad
+\begin{cases}
+\mu\text{ is invariant under every }\phi_t,\\
+\mu(A)\in\{0,1\}\text{ whenever }
+  \phi_t^{-1}A=A\text{ modulo }\mu\text{ for every }t\in\R.
+\end{cases}
+\]
+This definition and its zero--one consequences are in
+\leanmodule{HGAS/Dynamics/ErgodicInvariantProbability.lean}.  In particular,
+\leanname{IsErgodicInvariantProbability.zero_or_one_of_isInvariant} applies
+directly to a measurable set that is literally invariant under a two-sided
+flow.
+
+There is a small but important pitfall here: applying a theorem about the
+single map \(\phi_1\) would prove time-one ergodicity, not ergodicity for the
+whole real action.  The two notions need not agree.  The module
+\leanmodule{HGAS/Dynamics/ErgodicMaximizer.lean} therefore proves the
+full-flow result directly.
+
+The proof follows a convex-geometric route.  Send a probability measure to
+its integration functional
+\[
+\mu\longmapsto
+\left[f\longmapsto\int f\,\dd\mu\right]
+\]
+in the real weak dual of the bounded continuous functions.  On a compact
+metric space this map is continuous, affine, and injective; injectivity is
+the uniqueness part of real Riesz--Markov.  Since \Mathlib{} defines the
+weak-star topology through evaluation coordinates but does not register the
+needed locally convex instance in this form, the module proves that the
+coordinate map is inducing and constructs that instance explicitly.  The
+image of the invariant probabilities is then compact and convex.  For a
+fixed observable \(f\), the measures maximizing
+\(\int f\,\dd\mu\) form a nonempty compact face.  Krein--Milman supplies an
+extreme point of that face, hence an extreme point of the full invariant
+set.  The formal proof then:
+\begin{enumerate}
+\item converts real weak-dual extremality back to extremality in the positive
+measure cone; and
+\item proves directly that an extreme probability invariant under every
+time map satisfies the full-flow zero--one law, by splitting it into
+conditional probabilities on an invariant set and its complement.
+\end{enumerate}
+
+The resulting endpoint is
+\leanname{exists_ergodicInvariantProbability_isMaxOn_average}: every bounded
+continuous observable on a nonempty compact metric flow has an invariant
+probability that is both ergodic for the whole real flow and maximizing
+among \emph{all} invariant probabilities.  The chosen version is
+\leanname{ergodicMaximizingInvariantProbabilityMeasure}.  Two useful
+consequences are
+\leanname{invariantAverage_le_of_forall_ergodic} and
+\leanname{forall_invariantAverage_le_iff_forall_ergodic}: to prove an upper
+bound for every invariant average, it is enough to prove it for ergodic
+invariant probabilities.  This argument uses one ergodic maximizer and does
+not require a measurable ergodic-decomposition theorem.
+
+Finally,
+\leanmodule{HGAS/Dynamics/ErgodicMaximalInvariantAverage.lean} identifies the
+chosen ergodic average with the numerical maximum used elsewhere:
+\[
+\leanname{ergodicMaximizingInvariantProbabilityMeasure_average_eq},
+\qquad
+\leanname{maximalInvariantAverage_le_of_forall_ergodic}.
+\]
+These are unconditional kernel-checked theorems, not part of the remaining
+horocycle classification interface.
+
+Combining the angular ODE analysis and compact invariant-measure argument
+gives the exact reusable criterion
+\[
+0\text{ is GAS for }F
+\quad\Longleftrightarrow\quad
+\max_{\mu\in\mathcal I(\phi)}
+  \int a\,\dd\mu<0.
+\]
+The Lean theorem is
+\leanname{globallyAsymptoticallyStable_iff_maximalAngularAverage_neg} in
+\leanmodule{HGAS/Wrapper/AngularAverageGAS.lean}.  Its hypotheses say that
+the finite-dimensional field is \(C^2\), homogeneous of positive degree,
+and vanishes at the origin.
+
+\section{The computably enumerable upper bound}
+\label{sec:upper}
+
+The upper-bound theorem is already unconditional:
+\[
+\boxed{\text{if \(d\) is odd, then \(\HGAS_{\Q}(n,d)\) is c.e.}}
+\]
+The exact Lean declaration is
+\leanname{hgasQ_re_of_oddDegree} in
+\leanmodule{HGAS/Lyapunov/RationalHomogeneousConverse.lean}.
+
+\subsection{What a certificate contains}
+
+Write
+\[
+\rho(x)=x_1^2+\cdots+x_n^2.
+\]
+A candidate stores a rational polynomial \(p\), a denominator exponent
+\(r\), and exact positivity-margin data.  The associated degree-two
+rational Lyapunov function is
+\[
+V(x)=\frac{p(x)}{\rho(x)^r}.
+\]
+The numerator of \(-\dot V\), after multiplying by the positive
+denominator, is
+\[
+q(F,p,r)
+=-\rho\,\nabla p\cdot F+2r\,p\,x\cdot F.
+\]
+This literal polynomial is
+\leanname{rationalLyapunovNumerator} in
+\leanmodule{HGAS/Lyapunov/RationalCertificateAlgebra.lean}.
+
+The Boolean checker \leanname{checkRationalLyapunov} verifies two strict
+polynomial inequalities by finite rational arithmetic: one for positivity
+of \(p/\rho^r\), and one for strict decay.  The checker is primitive
+recursive
+(\leanname{checkRationalLyapunov_primrec}).  Its soundness theorem proves
+not only stability and attraction but also forward completeness, using
+coercive sublevel bounds; see
+\leanmodule{HGAS/Lyapunov/CheckedRationalCertificateSoundness.lean}.
+
+\subsection{Why every odd-degree GAS field has a certificate}
+
+The completeness proof follows a geometric route.
+
+\begin{enumerate}
+\item The angular-flow construction produces a strict \(C^1\),
+degree-two homogeneous Lyapunov function.  This is developed in
+\leanmodule{HGAS/Lyapunov/HomogeneousConverseC1.lean} and
+\leanmodule{HGAS/Lyapunov/EuclideanAngularConverse.lean}.
+
+\item When \(d\) is odd, \(F(-x)=-F(x)\).  Averaging the Lyapunov function
+with its antipodal pullback makes it even while preserving strict
+positivity and strict decay.  The reusable implementation is in
+\leanmodule{HGAS/Analysis/EvenC1Lyapunov.lean}.
+
+\item On the unit sphere, approximate the function and its first
+derivatives simultaneously by multivariate Bernstein polynomials.  The
+development constructs the tensor Bernstein operator, proves derivative
+formulas, and controls the \(C^1\) error in the modules
+\leanmodule{HGAS/Analysis/TensorBernsteinPolynomial.lean},
+\leanmodule{HGAS/Analysis/TensorBernsteinDerivative.lean}, and
+\leanmodule{HGAS/Analysis/TensorBernsteinC1Approximation.lean}.
+
+\item Evenness permits homogeneous polynomial reconstruction.  A sufficiently
+small rational perturbation of the coefficients preserves the two strict
+margins on the compact sphere.
+
+\item Exact grid bounds replace semantic positivity with a finite
+certificate.  The files
+\leanmodule{HGAS/Lyapunov/ExactGridPositivity.lean} and
+\leanmodule{HGAS/Lyapunov/GridRationalCertificateCompleteness.lean}
+prove that a sufficiently fine rational grid, together with derivative
+bounds, certifies positivity everywhere.
+\end{enumerate}
+
+The theorem
+\leanname{realRationalLyapunovWitness_of_GAS_oddDegree} packages these
+steps.  Then an enumeration of all finite candidates, combined with the
+primitive-recursive checker, proves c.e. membership.
+
+This proof is related to the homogeneous converse theorem of
+Rosier~\cite{Rosier1992} and the rational Lyapunov results of Ahmadi and El
+Khadir~\cite{AhmadiElKhadir2020}.  In the current Lean development, however,
+the needed analytic and approximation chain is proved internally; the
+literature theorem is not introduced as an axiom.
+
+\section{The unconditional arithmetic source}
+\label{sec:arithmetic}
+
+\subsection{Universal halting and \(\Sigma^0_1\)-completeness}
+
+The file \leanmodule{HGAS/Computability/SigmaOne.lean} defines
+\[
+\leanname{SigmaOneComplete}(P)
+\quad:\Longleftrightarrow\quad
+P\text{ is c.e. and every c.e. predicate many-one reduces to }P.
+\]
+It also defines a universal halting predicate for \Mathlib{} partial
+recursive codes and proves
+\leanname{universalHalts_sigmaOneComplete}.  The reduction from an arbitrary
+c.e. set is explicit: choose a code for its partial characteristic
+computation and pair that fixed code with the input.
+
+\subsection{From primitive recursion to Diophantine equations}
+
+The formal MRDP route is not a one-line appeal to the classical theorem.
+It proves, by structural induction, that the graph of every unary
+primitive-recursive function is Diophantine.  The difficult recursion case
+uses a sparse radix encoding of an entire finite computation trace.
+
+At a high level, a trace \(a_0,\ldots,a_N\) is packed into the digits of a
+large integer.  A Diophantine certificate asserts:
+\[
+a_0=\mathrm{initial}(z),\qquad
+a_{i+1}=\mathrm{step}(z,i,a_i)\ (i<N),\qquad
+a_N=y.
+\]
+The bounded universal quantifier over \(i<N\) is itself compiled into a
+sparse cipher certificate.  The common radix is chosen large enough that
+all registers at all time positions are valid digits.
+
+The main files are
+\leanmodule{HGAS/Arithmetic/SparseBoundedForall.lean} and
+\leanmodule{HGAS/Arithmetic/PrimitiveRecursiveDiophantine.lean}.  Principal
+theorems include
+\leanname{cipherCertificate_iff_boundedForall},
+\leanname{boundedForall_dioph},
+\leanname{recursionCertificate_iff},
+\leanname{natPrimrec_unaryGraph_dioph}, and
+\leanname{binaryPrimrecRel_dioph}.
+
+The former interface
+``every binary primitive-recursive relation is Diophantine'' is discharged
+by
+\leanname{UniversalHalting.binaryPrimitiveRecursiveRelationsAreDiophantine}
+in \leanmodule{HGAS/Arithmetic/UnconditionalMRDP.lean}.  This yields a
+fixed finite integer polynomial representing universal halting and the
+semantic theorem
+\leanname{unconditionalUniversalHaltingRepresentation_spec}.
+
+The classical lineage is the Davis--Putnam--Robinson--Matiyasevich theorem
+\cite{DavisPutnamRobinson1961,Matiyasevich1970,Matiyasevich1971,
+Matiyasevich1993}.  The Lean proof makes its particular
+primitive-recursive closure route explicit.  One scope point matters: the
+final finite representative is chosen from a proof in \(\mathrm{Prop}\).
+Thus its equation and variable counts are fixed natural numbers, but the
+development does not print their numerical values or give a uniform
+extractor for arbitrary c.e. programs.
+
+\subsection{Diagonal--quadratic--linear form}
+
+A DQL system has integer variables \(x_j\) and rows
+\[
+\sum_j\bigl(A_{ij}x_j^2+B_{ij}x_j\bigr)=c_i.
+\]
+No mixed quadratic term is allowed.  This form is expressive because a
+multiplication gate \(xy=z\) can be replaced by
+\[
+w=x+y,\qquad w^2-x^2-y^2-2z=0,
+\]
+and natural-number variables can be represented over \(\Z\) by Lagrange's
+four-square theorem~\cite{Lagrange1770}.  These two elementary equivalences are proved in
+\leanmodule{HGAS/Arithmetic/DQL.lean}.
+
+The finite circuit compiler preserves one fixed target arity after the
+universal polynomial has been chosen.  In
+\leanmodule{HGAS/Arithmetic/UnconditionalFixedDQL.lean}, the exact results
+are:
+\begin{align*}
+&\leanname{unconditionalUniversalHaltingFixedDQL_solvable_iff},\\
+&\leanname{unconditionalUniversalHaltingFixedDQL_computable},\\
+&\leanname{unconditionalFixedDQLSolvability_sigmaOneComplete}.
+\end{align*}
+Thus solvability on one fixed DQL type is unconditionally
+\(\Sigma^0_1\)-complete.
+
+\section{Clocks, recurrence, and invariant measures}
+\label{sec:clocks}
+
+The reduction needs polynomial clocks whose long-term frequencies are
+rigid under \emph{every} invariant probability, not merely under a selected
+trajectory.
+
+\subsection{Controller circles}
+
+For a parameter \(p>1\), a two-dimensional controller has two hyperbolic
+eigendirections.  Its normalized linear flow on the circle has only two
+stationary directions; every other orbit moves monotonically through a
+height coordinate.  Pairwise-disjoint translates of a strip then show that
+an invariant probability gives the nonstationary set zero mass.
+
+The explicit circle flow is \leanname{controllerFlow} in
+\leanmodule{HGAS/Clocks/ControllerFlow.lean}.  The measure-theoretic endpoint
+is
+\leanname{invariantProbability_polynomialEquilibria_compl_eq_zero}; the
+locked coordinate squares are identified by
+\leanname{invariantProbability_lockedCoordinateSquares_compl_eq_zero}.
+The underlying polynomial identities are in
+\leanmodule{HGAS/Clocks/Controller.lean}.
+
+The corresponding finite polynomial compiler is now also explicit.  For a
+rational code \(p\), the state has four real coordinates
+\((r,s,c,d)\), arranged as a controller circle and a driven phase circle:
+\[
+\begin{aligned}
+\dot r&=-s(pr^2-1),&
+\dot s&= r(pr^2-1),\\
+\dot c&=-(pr)d,&
+\dot d&=(pr)c.
+\end{aligned}
+\tag{5.1}
+\]
+The first pair is tangent to \(r^2+s^2=1\), and the second pair is tangent
+to \(c^2+d^2=1\).  At a locked point \(pr^2=1\), the phase frequency is
+\(pr=\pm\sqrt p\), which is the radical frequency used below.
+
+The module \leanmodule{HGAS/Clocks/ControllerPolynomialCode.lean} fixes the
+coordinate order, supplies inverse structured-state conversions, and emits
+\leanname{ControllerPolynomialCode.fieldCode}.  Its theorem
+\leanname{ControllerPolynomialCode.realize_fieldCode_arbitrary} proves
+(5.1) at every point of \(\R^4\), without assuming either circle equation.
+Theorems \leanname{ControllerPolynomialCode.controller_tangent} and
+\leanname{ControllerPolynomialCode.phase_tangent} establish the two
+tangency identities.  The emitted code is primitive recursive in \(p\) by
+\leanname{ControllerPolynomialCode.fieldCode_primrec}, and
+\leanname{ControllerPolynomialCode.fieldCode_termsDegreeLE} gives the
+literal uniform raw-degree bound \(3\): the controller coordinates are
+cubic, whereas the two phase coordinates are quadratic.
+
+The finite compiler itself accepts every rational \(p\).  Positivity,
+primality, and \(p>1\) enter only when the analytic support and radical
+independence theorems are applied.
+
+There is now also a genuine global flow for any finite family of these
+coupled blocks.  The reusable construction in
+\leanmodule{HGAS/Dynamics/ContinuousPhaseSkewFlow.lean} starts from a
+continuous base flow \(\phi\) and continuous angular velocities \(a_i\).
+It sets
+\[
+ A_i(t,x)=\int_0^t a_i(\phi_sx)\,\dd s,\qquad
+ (x,z)\longmapsto
+ \bigl(\phi_t x,(e^{\,iA_i(t,x)}z_i)_i\bigr).
+\]
+Joint continuity of the orbit integral and its cocycle identity give a
+continuous real flow.  The theorem
+\leanname{hasDerivAt_phaseSkewFlow_coe} proves the literal differential
+equation
+\[
+ \dot z_i(t)=i\,a_i(\phi_t x)z_i(t)
+\]
+at the current base state.
+
+The specialization
+\leanmodule{HGAS/Clocks/ControllerPhaseFlow.lean} takes the product of the
+explicit controller flows and \(a_i=p_i r_i\).  Its
+\leanname{controllerPhaseFlow} therefore solves all four equations in
+(5.1) simultaneously.  This is checked coordinatewise by
+\leanname{controllerPhaseFlow_solves_controllerField} and
+\leanname{controllerPhaseFlow_solves_lockedPhaseField}; each controller
+projection is an exact continuous equivariant factor.  Thus the
+time-dependent-looking phase equation is not merely a formal vector-field
+expression: it is part of a global autonomous flow.
+
+The analytic state orders all controller circles and then all phase
+circles, whereas the finite two-controller compiler introduced in
+Section~\ref{sec:dynamic-linked-compiler} stores two interleaved
+\((r,s,c,d)\) blocks before the linked state.  The equations have been
+proved in both representations, but the final source assembly must still
+package the regrouping map and all downstream factor maps in one theorem.
+
+\subsection{Ergodicity selects one controller equilibrium}
+
+The support theorem above says that an invariant controller probability is
+concentrated on a finite set of fixed points.  Ergodicity supplies the
+missing selection principle.  The reusable theorem
+\leanname{exists_eq_diracProba_of_isErgodicInvariantProbability_ae_fixed}
+in \leanmodule{HGAS/Dynamics/ErgodicFixedSupport.lean} states:
+\[
+\begin{split}
+ &\mu\text{ is an ergodic invariant probability, and}\\
+ &\mu\text{-almost every point is fixed by every time map}
+ \quad\Longrightarrow\quad
+ \mu=\delta_x\text{ for some }x .
+\end{split}
+\tag{5.2}
+\]
+Indeed, modulo the null set of nonfixed points, every measurable set is
+invariant.  Ergodicity makes \(\mu\) a zero--one measure, and the
+standard-Borel zero--one theorem makes such a nonzero probability a Dirac
+measure.
+
+Applying (5.2) to the wandering-strip support theorem gives
+\leanname{exists_eq_diracProba_at_controllerEquilibrium} in
+\leanmodule{HGAS/Clocks/ErgodicControllerSelection.lean}.  It selects one
+of the actual polynomial equilibria, not merely an unspecified fixed point.
+The manuscript-facing consequences are
+\[
+ p\,r^2=1,\qquad r^2=\frac1p,\qquad
+ s^2=1-\frac1p,\qquad (pr)^2=p .
+\tag{5.3}
+\]
+The last identity says that the selected signed phase frequency is
+\(\pm\sqrt p\).  The same module proves factor versions: if a continuous
+equivariant observation of a larger ergodic flow is a controller circle,
+then its pushed controller marginal is a Dirac mass at one equilibrium.
+For a finite family, these componentwise statements can be intersected to
+obtain one almost-sure controller tuple.  The next argument performs that
+intersection and derives the phase law without assuming false global
+equivariance.
+
+\subsection{Radically independent torus rotations}
+
+At a locked controller, the phase frequency is a signed square root of a
+prime.  Distinct square roots of primes are linearly independent over
+\(\Q\).  The formal proof builds the tower of fields generated by finitely
+many prime square roots.  It proves by a square-class argument that a new
+prime square root cannot lie in the preceding field, and then removes one
+coefficient at a time from a putative rational relation.  Its final forms are
+\leanname{linearIndependent_sqrt_primes} and
+\leanname{signedPrimeSqrtFrequency_hasNoNontrivialIntegerCharacter} in
+\leanmodule{HGAS/Clocks/RadicalIndependence.lean}.
+
+For a torus translation, invariance annihilates every nontrivial Fourier
+character.  Since characters determine probability measures, the only
+invariant probability is Haar measure.  Theorems
+\leanname{invariantProbability_eq_torusHaar_of_noCharacter} and
+\leanname{signedPrimeSqrt_uniqueInvariantProbability} in
+\leanmodule{HGAS/Clocks/RadicalClock.lean} formalize this argument.
+
+One normalization is easy to miss.  The polynomial phase equation
+\[
+ \dot c=-\omega d,\qquad \dot d=\omega c
+\]
+uses angular velocity \(\omega\) in radians, while
+\(\operatorname{UnitAddCircle}=\R/\Z\) measures turns.  Under the canonical
+map \(x\mapsto e^{2\pi i x}\), the corresponding translation frequency is
+\[
+ v=\frac{\omega}{2\pi}.
+\tag{5.4}
+\]
+The module \leanmodule{HGAS/Clocks/PhaseClockFlow.lean} proves this exact
+semiconjugacy and separately proves that the physical rotation
+\(z(t)=e^{i\omega t}z(0)\) solves the real polynomial phase field, with the
+displayed sign.  The module
+\leanmodule{HGAS/Clocks/ScaledRadicalClock.lean} proves that multiplying
+every frequency by one common nonzero real scalar preserves the absence of
+integer resonances.  Since \(1/(2\pi)\ne0\), division by \(2\pi\) does not
+destroy radical independence.
+
+The coordinatewise result in
+\leanmodule{HGAS/Clocks/PhaseTorusFlow.lean} is
+\leanname{physicalSignedRadicalPhase_equivariantMarginal_eq_haar}.  Given
+an invariant ambient probability and an equivariant projection to physical
+circle rotations with signed prime-square-root angular velocities, its
+pushforward through the inverse angle map is normalized Haar measure on
+the additive torus.  Ambient ergodicity is not required.  This theorem
+fully discharges the radians-versus-turns issue for a phase projection that
+is already known to rotate at fixed signed radical frequencies.
+
+The missing passage from variable to fixed frequency is now proved in
+\leanmodule{HGAS/Clocks/ErgodicControllerPhaseHaar.lean}.  For an ergodic
+invariant probability \(\mu\) of the literal coupled flow,
+\leanname{exists_lockedControllerTuple} selects a tuple \(x\) of controller
+equilibria and proves simultaneously
+\[
+ (\pi_{\rm controller})_\ast\mu=\delta_x,
+ \qquad
+ z_{\rm controller}=x\quad\text{for \(\mu\)-almost every }z .
+\tag{5.5}
+\]
+The finiteness of the clock index set is essential here: it lets the proof
+intersect the full-measure coordinate fibres.
+
+Phase projection is \emph{not} globally equivariant with a constant
+rotation, because an unlocked controller has time-varying velocity
+\(p_i r_i(t)\).  Instead,
+\leanname{phaseProjection_ae_semiconj} proves, for every fixed time \(t\),
+the almost-everywhere identity
+\[
+ \pi_{\rm phase}(\Phi_t z)
+ =
+ \operatorname{Rot}_{\,t(p_i\operatorname{Re}x_i)_i}
+   (\pi_{\rm phase}z)
+ \quad\text{for \(\mu\)-almost every }z .
+\tag{5.6}
+\]
+The construction \leanname{lockedPhaseInvariantProbability} uses this
+identity through equality of pushforward measures: it replaces the two
+maps only almost everywhere, applies invariance of \(\mu\), and concludes
+that the physical phase marginal is invariant under the constant locked
+rotation.  No global semiconjugacy is smuggled into this step.
+
+For distinct prime parameters, the locked frequencies are exactly
+\(\sigma_i\sqrt{p_i}\), with \(\sigma_i\in\{+1,-1\}\).
+The endpoint
+\leanname{exists_lockedController_sign_and_phaseHaar} packages the selected
+controller tuple, its joint Dirac marginal, almost-sure concentration on
+the locked fibre, the sign tuple, the exact radical-frequency identity,
+and Haar probability for the phase marginal after division by \(2\pi\).
+Thus the coupled controller--phase invariant-measure classification itself
+is complete.  A later source theorem must still exhibit the relevant
+coupled clock flow as a factor of the full modular/Jacobi/detector
+polynomial construction.
+
+\subsection{Reusable measure transport}
+
+Several supporting modules are worth separating from the application.
+
+\begin{itemize}
+\item \leanmodule{HGAS/Dynamics/InvariantProbability.lean} defines invariant
+probabilities and equivariant pushforward.
+\item \leanmodule{HGAS/Dynamics/PoincareRecurrence.lean} proves almost-everywhere
+and existential forward recurrence for invariant probabilities.
+\item \leanmodule{HGAS/Dynamics/RecurrenceTransport.lean} transports
+recurrence through embeddings, homeomorphisms, and semiconjugacies.
+\item \leanmodule{HGAS/Dynamics/FiniteSkewProductMeasure.lean} lifts an
+invariant probability across a finite permutation skew product and
+preserves the required recurrence statement.
+\item \leanmodule{HGAS/Dynamics/InvariantMeasureTimeChange.lean} constructs
+the normalized reciprocal-density measure for a positive generator time
+change and proves the exact drift identity.
+\end{itemize}
+
+These constructions formalize the recurrence and invariant-measure tools
+used in the manuscript; Walters~\cite{Walters1982} is a standard reference
+for the surrounding ergodic theory.
+
+\subsection{The detector theorem with physical clocks}
+
+The arithmetic detector is naturally a function of additive turn
+coordinates, whereas the polynomial source supplies physical complex
+circles.  The theorem
+\leanname{maximalInvariantAverage_neg_halfDetector_physicalClocks_iff_solvable}
+in \leanmodule{HGAS/Arithmetic/DetectorPhysicalClockAverage.lean} composes
+the inverse angle map (5.4), radical nonresonance, and Fourier
+constant-term extraction.  Its hypotheses are a compact metric flow
+\(\phi\), distinct prime parameters and signs, and a continuous equivariant
+physical-phase projection.  Under precisely those hypotheses,
+\[
+ \mathcal M_\phi\!\left(
+   -\operatorname{Re}\!
+     \left(\text{expanded detector}_{\,1/2,\,1/2}\right)\right)<0
+ \quad\Longleftrightarrow\quad
+ \text{the given DQL system is solvable}.
+\tag{5.7}
+\]
+There is no additional assumption saying that every phase marginal is
+Haar: \leanname{physicalSignedRadicalPhase_equivariantMarginal_eq_haar}
+proves it for every invariant joining.
+
+The fixed-resource specialization
+\leanname{maximalInvariantAverage_unconditionalUniversalHalting_physicalClocks_iff}
+in
+\leanmodule{HGAS/Arithmetic/UnconditionalFixedDetectorPhysicalClockAverage.lean}
+replaces DQL solvability by the project's unary universal-halting
+predicate.  The phase index type, prime family, source flow, and factor map
+are fixed across inputs; only the finite detector coefficients vary.
+This is already an unconditional arithmetic-to-average theorem, but it is
+still a theorem \emph{about any flow carrying the stated physical factor}.
+It does not construct that factor inside the final rational polynomial
+source.
+
+\subsection{The right-hand-side oscillator}
+\label{sec:rhs-oscillator}
+
+The reduction also needs to replace an input-dependent Laurent character by
+an ordinary state variable.  Let \(\nu_i(x)\) be real polynomial frequency
+codes and \(a_i\in\Q\), and put
+\[
+ W(x)=\sum_i a_i\nu_i(x).
+\]
+The module
+\leanmodule{HGAS/Clocks/RHSOscillatorPolynomialCode.lean} adjoins two real
+coordinates \(R=X+iY\) to an arbitrary \(n\)-dimensional polynomial field
+and emits
+\[
+ R'=-4iW(x)R,\qquad
+ X'=4W(x)Y,\qquad Y'=-4W(x)X.
+\tag{5.8}
+\]
+The theorem \leanname{RHSOscillatorPolynomialCode.realize_fieldCode}
+proves these equations at every point of \(\R^{n+2}\), with no unit-circle
+or controller-lock hypothesis, and
+\leanname{RHSOscillatorPolynomialCode.oscillator_tangent} proves
+\(XX'+YY'=0\) identically.  The compiler is primitive recursive in the
+base field, coefficients, and frequency codes.  If the base field has
+degree at most \(D\) and every \(\nu_i\) has degree at most \(E\), the new
+coordinates have degree at most \(E+1\); in particular, linear clock
+frequencies produce quadratic oscillator equations.
+
+There is a complementary, exact invariant-measure theorem in
+\leanmodule{HGAS/Clocks/RHSOscillatorGraph.lean}.  Write the base as the
+additive torus \((\R/\Z)^d\), let \(a\in\Z^d\), and drive one extra
+additive circle at frequency
+\[
+ -\langle a,\omega\rangle
+   =-\sum_i a_i\omega_i .
+\]
+Then
+\[
+ \Xi(x,R)=R+\sum_i a_i x_i
+\tag{5.9}
+\]
+is conserved.  The triangular homeomorphism
+\((x,R)\mapsto(x,\Xi(x,R))\) conjugates the joint flow to the base
+translation times the identity flow.  If \(\omega\) has no nontrivial
+integer resonance, the theorem
+\leanname{ergodicInvariantProbability_graphClassification} says that every
+ergodic invariant probability has Haar base marginal and equals Haar
+pushed onto one unique graph
+\[
+ R=\xi-\sum_i a_i x_i .
+\]
+The selected graph has full measure.  The module also proves an
+equivariant-factor form for the oscillator marginal of an arbitrary
+ergodic ambient joining, and a nonergodic factor theorem for the Haar base
+marginal.
+
+For the fourth-power convention in (5.8), the integer character is
+\(a_i=4c_i\).  The specialized frequency and invariant are proved
+literally:
+\[
+ \Omega_R=-4\sum_i c_i\omega_i,\qquad
+ \Xi=R+4\sum_i c_i x_i.
+\tag{5.10}
+\]
+An arbitrary rational number does not define multiplication on
+\(\R/\Z\).  The reusable structure
+\leanname{FourIntegralRationalCoefficients} therefore records a rational
+vector \(c\), an integer vector representing \(4c\), and the equality
+between them.  The theorem
+\leanname{rationalRhsErgodicInvariantProbability_graphClassification}
+is the corresponding maximal correct rational-character statement.
+
+These results close the general measure theory and the standalone
+oscillator analysis.  What remains open is to identify, in one
+kernel-checked source theorem, the physical polynomial oscillator (5.8)
+with the normalized additive graph model (5.9)--(5.10), and to instantiate
+all equivariance and finite-cover maps for the complete modular/Jacobi
+polynomial state; see Section~\ref{sec:open-classification}.
+
+\section{Theta constants and modular differential identities}
+\label{sec:theta}
+
+\subsection{Canonical theta constants}
+
+For \(\tau\) in the upper half-plane, the project defines the classical
+theta constants by absolutely convergent series:
+\[
+\vartheta_2(\tau),\qquad
+\vartheta_3(\tau),\qquad
+\vartheta_4(\tau),
+\]
+and \(H_j=\vartheta_j^4\).  The definitions and comparison with
+\Mathlib{}'s Jacobi theta series are in
+\leanmodule{HGAS/Modular/ThetaConstants.lean}; holomorphy is proved in
+\leanmodule{HGAS/Modular/ThetaHolomorphy.lean}.
+
+The modular transformation and cusp-asymptotic modules support proofs by a
+standard pattern: build a holomorphic modular expression, prove its
+transformation under the generators \(S,T\), show that it vanishes at the
+cusp, and use a low-weight vanishing theorem.  In this way the development
+proves:
+\begin{itemize}
+\item Jacobi's quartic identity
+\[
+\vartheta_3^4=\vartheta_2^4+\vartheta_4^4
+\]
+as \leanname{jacobi_quartic_identity};
+\item the theta derivative identities
+\leanname{normalizedDeriv_H₂},
+\leanname{normalizedDeriv_H₃}, and
+\leanname{normalizedDeriv_H₄};
+\item Ramanujan's equations
+\leanname{ramanujan_E2}, \leanname{ramanujan_E4}, and
+\leanname{ramanujan_E6}.
+\end{itemize}
+The corresponding modules are
+\leanmodule{HGAS/Modular/ThetaJacobiIdentity.lean},
+\leanmodule{HGAS/Modular/ThetaDerivativeIdentities.lean}, and
+\leanmodule{HGAS/Modular/RamanujanIdentities.lean}.
+
+These formulas are classical; useful references are
+Chandrasekharan~\cite{Chandrasekharan1985}, Mumford~\cite{Mumford1983}, and
+the DLMF~\cite{DLMF}.  The Lean files derive the normalizations they use
+rather than importing the formulas as axioms.
+
+\section{The Jacobi theta state}
+\label{sec:jacobi}
+
+\subsection{Residual quadrics and first-order Wronskians}
+
+Fix \(\tau\in\mathbb H\), and write
+\[
+T(z)=\bigl(\vartheta_1(z|\tau),\vartheta_2(z|\tau),
+           \vartheta_3(z|\tau),\vartheta_4(z|\tau)\bigr).
+\]
+Two homogeneous quadrics cut out the intended residual curve in
+\(\C^4\).  The actual theta vector satisfies both; this is proved in
+\leanmodule{HGAS/Modular/JacobiThetaResiduals.lean}.  The duplication
+identities are formalized in
+\leanmodule{HGAS/Modular/JacobiThetaDuplication.lean}.
+
+The first-order closed elliptic system needs three Wronskian identities.
+The proof in
+\leanmodule{HGAS/Modular/JacobiThetaWronskians.lean} proceeds from the
+series:
+\begin{enumerate}
+\item rewrite half-characteristic theta functions as summable series;
+\item pair even and odd lattice indices;
+\item prove doubling recurrences for the Wronskian and for the product of
+theta constants;
+\item identify the multiplicative constant from the cusp asymptotic;
+\item use analyticity and cancellation to extend across zeros.
+\end{enumerate}
+The endpoint is \leanname{canonicalJacobiThetaWronskiansAt}.  No local
+rank or nonvanishing hypothesis remains in that theorem.
+
+\subsection{The Delta identity}
+\label{sec:delta}
+
+The canonical algebraic Jacobi state stores
+\[
+p_j=\vartheta_j(\tau)^2,\quad
+H=\frac{E_2(\tau)}{12},\quad
+T_j=\vartheta_j(z|\tau),\quad
+\Delta=\frac{1}{\pi}\partial_z\vartheta_1(z|\tau),\quad
+U=T_1^{-1}.
+\]
+All first-order coordinate equations except the \(\Delta\)-equation follow
+from the Wronskians.  After clearing the reciprocal \(U\), the missing
+equation is exactly
+\[
+T_1\,\partial_z^2T_1
+=(\partial_zT_1)^2
+ -\pi^2p_3p_4T_2^2
+ -4\pi^2K\,T_1^2,
+\qquad
+K=H+\frac{p_3^2+p_4^2}{12}.
+\tag{7.1}
+\]
+The signs in (7.1) are those used by the actual Lean vector field.
+
+The module
+\leanmodule{HGAS/Modular/JacobiThetaDeltaIdentity.lean} now proves this
+identity unconditionally.  The proof is instructive.
+
+\begin{enumerate}
+\item Define the cross-multiplied error \(E_1\) for \(T_1\) and a companion
+error \(E_2\) for \(T_2\).
+\item Differentiate the first Wronskian.  The three Wronskians and the two
+residual quadrics yield the polynomial identity
+\[
+T_1^2E_2=T_2^2E_1.
+\]
+\item Since \(T_1,T_2\) have no common zero, patch \(E_1/T_1^2\) and
+\(E_2/T_2^2\) to an entire function of \(z\).
+\item Differentiate theta quasiperiodicity.  The patched function has
+periods \(1\) and \(\tau\), hence is bounded on a fundamental
+parallelogram.  Liouville's theorem makes it constant.
+\item Prove the heat equation
+\[
+\partial_z^2\vartheta_2
+  =4\pi i\,\partial_\tau\vartheta_2
+\]
+by termwise differentiation of the Gaussian series, with summability and
+local uniformity made explicit.
+\item At \(z=0\), evenness gives \(\partial_z\vartheta_2=0\).  The heat
+equation, the modular derivative identity, and Jacobi's quartic identity
+show that the companion error is zero there.
+\item The patched constant is therefore zero.  The patching identity
+extends the conclusion across every zero of \(T_1\).
+\end{enumerate}
+
+The exported theorems are
+\leanname{jacobiThetaDeltaIdentity},
+\leanname{canonicalJacobiThetaState_elliptic_unconditional}, and
+\leanname{canonicalJacobiThetaRealAffine_isScaledTrajectory_unconditional}.
+The last theorem checks the normalization: restricting along
+\(z(t)=z_0+tv\) gives elliptic speed \(v\pi\).
+
+Brezhnev's closed elliptic system provides the literature context and
+normalization comparison~\cite[Theorem 4.1 and equation (34),
+pp.~702--703]{Brezhnev2013}.  The Lean proof of (7.1) is independent of
+treating that reference as a formal assumption.
+
+\subsection{The effective ten-coordinate Jacobi compiler}
+\label{sec:jacobi-compiler}
+
+The analytic theorems above describe complex-valued functions.  A
+computability reduction, however, needs a finite list of rational
+polynomials.  The three modules
+\[
+\begin{gathered}
+\leanmodule{HGAS/Modular/JacobiPolynomialCode.lean},\\
+\leanmodule{HGAS/Modular/JacobiPolynomialComputability.lean},\qquad
+\leanmodule{HGAS/Modular/JacobiPolynomialDegrees.lean}
+\end{gathered}
+\]
+now provide that finite compiler for the entire reciprocal Jacobi chart.
+
+The complex coordinate order is fixed once and for all:
+\[
+\begin{array}{c|cccccccccc}
+\text{index}&0&1&2&3&4&5&6&7&8&9\\ \hline
+\text{coordinate}&p_2&p_3&p_4&H&T_1&T_2&T_3&T_4&\Delta&U .
+\end{array}
+\]
+The maps \leanname{JacobiPolynomialCode.point} and
+\leanname{JacobiPolynomialCode.state} move between this vector and the
+structured \leanname{JacobiState}; \leanname{state_point} and
+\leanname{point_state} prove that the two maps are inverse.  Thus a semantic
+theorem about coordinate \(i\) cannot hide a permutation of the state.
+
+The reusable syntax \leanname{ComplexPolynomialCode} represents one complex
+polynomial by a pair of rational sparse polynomials in the real and
+imaginary parts of all variables.  Complex addition and multiplication are
+finite list operations.  A \leanname{GaussianRationalCode} is just the pair
+of rational real and imaginary parts of a scalar.  Consequently no complex
+floating-point arithmetic enters the compiler.
+
+There is also a reusable realification operation for a family whose number
+of equations need not equal its number of variables.  If
+\[
+H:\operatorname{Fin}(m)\longrightarrow
+  \leanname{ComplexPolynomialCode}(n),
+\]
+then \leanname{ComplexPolynomialFamilyCode.realify} emits \(2m\) real
+polynomials in \(2n\) real variables: first all real parts, then all
+imaginary parts.  This genuinely extends field realification, for which the
+number of outputs is constrained to equal \(n\).  The theorem
+\leanname{ComplexPolynomialFamilyCode.complexifyPoint_eval_realify}
+reassembles the \(2m\) evaluated scalars into the original \(m\) complex
+values, and
+\leanname{ComplexPolynomialFamilyCode.forall_eval_realify_eq_zero_iff}
+proves
+\[
+\bigl[\text{all \(2m\) real scalar equations vanish}\bigr]
+\quad\Longleftrightarrow\quad
+\bigl[\text{all \(m\) complex equations vanish}\bigr].
+\tag{7.2}
+\]
+The construction preserves every uniform raw-degree bound and is primitive
+recursive, by
+\leanname{ComplexPolynomialFamilyCode.realify_termsDegreeLE} and
+\leanname{ComplexPolynomialFamilyCode.realify_primrec}.  These results live
+in \leanmodule{HGAS/Algebra/ComplexPolynomialFamilyCode.lean}; they are not
+specific to theta functions and can be reused for any finite complex
+constraint family.
+
+Two ten-component fields are emitted.  The first is the elliptic
+derivation \(\mathcal Z\):
+\[
+\begin{aligned}
+\mathcal Z(p_2,p_3,p_4,H)&=0,&
+\mathcal Z(T_1)&=\Delta,\\
+\mathcal Z(T_2)&=U(\Delta T_2-p_2T_3T_4),&
+\mathcal Z(T_3)&=U(\Delta T_3-p_3T_4T_2),\\
+\mathcal Z(T_4)&=U(\Delta T_4-p_4T_2T_3),&
+\mathcal Z(U)&=-U^2\Delta,\\
+\mathcal Z(\Delta)&=
+ U(\Delta^2-p_3p_4T_2^2)-4KT_1,&
+K&=H+\frac{p_3^2+p_4^2}{12}.
+\end{aligned}
+\]
+The second is the modular derivation \(\Phi\).  Its coefficient block begins
+\[
+\begin{aligned}
+\Phi(p_2)&=2\left(H+\frac{p_3^2+p_4^2}{12}\right)p_2,\\
+\Phi(p_3)&=2\left(H+\frac{p_2^2-p_4^2}{12}\right)p_3,\\
+\Phi(p_4)&=2\left(H-\frac{p_2^2+p_3^2}{12}\right)p_4,\\
+\Phi(H)&=2H^2-\frac{p_2^4+p_3^4+p_4^4}{144}.
+\end{aligned}
+\]
+The compiler also includes, without simplification, the complete
+\(T_1,T_2,T_3,T_4,\Delta,U\) equations from
+\leanname{JacobiState.modularVectorField}.  In particular, the
+degree-eight term
+\[
+-\frac12 p_2p_3p_4T_2T_3T_4U^2
+\]
+is present in the \(\Delta\)-coordinate.  Retaining unsimplified terms is
+intentional: later degree and homogeneity compilers reason about the literal
+raw sparse lists, so their correctness cannot depend on a noncomputable
+normal form.
+
+The semantic checks are coordinatewise and exact:
+\[
+\begin{aligned}
+\leanname{eval_ellipticFieldCode}&:
+ \operatorname{eval}(\mathcal Z_{\rm code},z)=\mathcal Z(z),\\
+\leanname{eval_modularFieldCode}&:
+ \operatorname{eval}(\Phi_{\rm code},z)=\Phi(z).
+\end{aligned}
+\]
+Given Gaussian-rational clocks \(\kappa_{\mathcal Z},\kappa_\Phi\),
+\leanname{combinedFieldCode} forms
+\(\kappa_{\mathcal Z}\mathcal Z+\kappa_\Phi\Phi\), and
+\leanname{eval_combinedFieldCode} proves the corresponding structured-state
+identity.
+
+Realification then turns the ten complex coordinates into twenty real
+coordinates.  The theorem
+\leanname{complexify_realize_compileFieldCode_arbitrary} is stronger than a
+chart-only statement: it holds at \emph{every} point of \(\R^{20}\).  After
+reassembling that point as a complex ten-vector and then a
+\leanname{JacobiState}, evaluation of the emitted real field is exactly the
+combined complex field.  None of the residual equations is assumed for this
+global semantic theorem.
+
+The same file emits finite codes for the intrinsic chart residuals
+\[
+\begin{aligned}
+R_0&=p_3^2-p_2^2-p_4^2,\\
+R_1&=p_2T_4^2-p_4T_2^2-p_3T_1^2,\\
+R_2&=p_2T_3^2-p_3T_2^2-p_4T_1^2,\\
+R_U&=UT_1-1.
+\end{aligned}
+\]
+Their order and semantics are fixed by \leanname{residualCode} and
+\leanname{eval_residualCode}.
+
+All code-producing maps are effective.  The fixed elliptic and modular
+fields are primitive-recursive constants;
+\leanname{combinedFieldCode_primrec} is primitive recursive in both clock
+codes; \leanname{compileFieldCode_primrec} composes this construction with
+primitive-recursive realification; and \leanname{residualCode_primrec}
+handles the fixed four-element residual family.  Explicit computability
+corollaries are exported for each.
+
+Finally, the degree ledger is syntactic and therefore robust under duplicate
+or cancelling terms:
+\[
+\begin{array}{c|c}
+\text{finite family}&\text{raw degree bound}\\ \hline
+\text{elliptic field}&5\\
+\text{modular field}&8\\
+\text{every two-clock combination and its realification}&8\\
+\text{four residuals}&3.
+\end{array}
+\]
+The exact theorem names are
+\leanname{ellipticFieldCode_termsDegreeLE},
+\leanname{modularFieldCode_termsDegreeLE},
+\leanname{combinedFieldCode_termsDegreeLE},
+\leanname{compileFieldCode_termsDegreeLE}, and
+\leanname{residualCode_termsDegreeLE}.  The fixed ledgers are decided by
+an executable raw-list predicate; the parameterized clock and realification
+bounds are then propagated by reusable degree lemmas.  The constructive
+decision and closure rules are reusable outside the Jacobi compiler; they
+live in \leanmodule{HGAS/Accumulator/PolynomialDegrees.lean} and
+\leanmodule{HGAS/Algebra/ComplexPolynomialDegrees.lean}.
+
+This compiler closes a genuine effectivity gap: once the semantic selector
+produces the appropriate Jacobi state and rational clock data, the complete
+polynomial field is already finite, rational, degree-bounded, and
+computable.  It does \emph{not} prove that every recurrent polynomial state
+comes from the analytic theta construction, nor does it construct the
+invariant-measure selector.  Those remain the semantic tasks in
+Section~\ref{sec:open-classification}.
+
+\subsection{The linked unary--Jacobi compiler}
+\label{sec:linked-jacobi-compiler}
+
+The reduction uses both a four-coordinate unary modular block
+\((A,C,E,Y)\) and the ten-coordinate Jacobi block above.  The unary block
+is convenient for modular classification, while the Jacobi block is
+convenient for the polynomial theta selector.  They cannot merely be
+identified informally: the compiler keeps them as independent variables
+and imposes explicit polynomial links.
+
+The module \leanmodule{HGAS/Modular/LinkedJacobiPolynomialCode.lean}
+constructs the combined field on
+\[
+4+10=14\quad\text{complex coordinates},\qquad
+2(4+10)=28\quad\text{real coordinates}.
+\]
+It uses the generic block-field constructors rather than copying any
+coordinate formula.  The elliptic clock acts only on the Jacobi block; the
+modular clock acts on both blocks.  Thus the only runtime field parameters
+are two Gaussian-rational codes
+\(\kappa_{\mathcal Z}\) and \(\kappa_\Phi\).  The theorem
+\leanname{LinkedJacobiPolynomialCode.eval_complexFieldCode} proves exact
+structured semantics, and the stronger theorem
+\leanname{LinkedJacobiPolynomialCode.complexify_realize_compileFieldCode_arbitrary}
+proves the real compiler correct at every \(x\in\R^{28}\), before any
+constraint equation is assumed.
+
+Ten complex residuals define the intended linked chart.  Four are the
+intrinsic Jacobi residuals \(R_0,R_1,R_2,R_U\) listed above.  The other six
+are
+\[
+\begin{gathered}
+Y^4-A-C,\qquad p_2^2-A,\qquad p_3^2-Y^4,\qquad
+p_4^2-C,\\
+12H-E,\qquad p_3-Y^2.
+\end{gathered}
+\tag{7.3}
+\]
+The final equation chooses the signed square-root branch rather than
+retaining only its square.  The executable enumeration
+\leanname{LinkedJacobiPolynomialCode.residualIndex} is proved bijective
+onto the ten semantic names, and
+\leanname{LinkedJacobiPolynomialCode.eval_residualCode} proves that each
+finite code evaluates to its named residual.
+
+Applying the arbitrary-family construction (7.2) produces twenty rational
+real residual codes in twenty-eight variables.  The theorem
+\leanname{LinkedJacobiPolynomialCode.forall_eval_realResidualCode_eq_zero_iff}
+says that all twenty scalar equations vanish exactly when every one of the
+ten named complex residuals vanishes.  This is an equivalence, not merely
+the easy implication from complex vanishing to real vanishing.
+
+The entire linked compiler is effective:
+\leanname{LinkedJacobiPolynomialCode.complexFieldCode_primrec} and
+\leanname{LinkedJacobiPolynomialCode.compileFieldCode_primrec} are
+primitive recursive in the two clock codes, while the ten complex and
+twenty real residual families are fixed primitive-recursive finite
+objects.  The syntactic degree ledger is
+\[
+\deg(\text{linked field})\leq8,\qquad
+\deg(\text{each linked residual})\leq4,
+\tag{7.4}
+\]
+both before and after realification.  The exact endpoints are
+\leanname{LinkedJacobiPolynomialCode.compileFieldCode_termsDegreeLE} and
+\leanname{LinkedJacobiPolynomialCode.realResidualCode_termsDegreeLE}.
+
+This is a completed finite compiler for the linked block.  It does not say
+that an arbitrary recurrent point satisfying the ten residuals is selected
+by analytic theta data, and it does not dynamically couple the linked block
+to arithmetic detectors.  The controller coupling is supplied by the next
+module; the analytic selector remains a semantic source-assembly question,
+not an omission from the sparse-polynomial compiler.
+
+\subsection{The dynamic two-controller linked-Jacobi compiler}
+\label{sec:dynamic-linked-compiler}
+
+The module
+\leanmodule{HGAS/Modular/TwoControllerLinkedJacobiPolynomialCode.lean}
+now adjoins two complete four-real-coordinate controller--phase blocks to
+the twenty-eight-real-coordinate linked state:
+\[
+ 4+4+28=36.
+\tag{7.5}
+\]
+The first controller supplies the modular angular velocity and the second
+supplies the integer-like parameter.  At a structured state define
+\[
+ \omega=p_\Omega r_\Omega,\qquad
+ n_{\rm dyn}=p_Nr_N,\qquad
+ \kappa_{\mathcal Z}=\frac{\omega+n_{\rm dyn}}2,\qquad
+ \kappa_\Phi=i\omega .
+\tag{7.6}
+\]
+The linked compiler originally takes constant Gaussian-rational
+coefficients.  To obtain (7.6) without pretending that a state-dependent
+quantity is a coefficient, the new compiler forms two fixed basis fields,
+with parameters \((1,0)\) and \((0,i)\), and multiplies their coordinates
+by the real polynomial codes for \(\kappa_{\mathcal Z}\) and \(\omega\).
+The coordinatewise identity
+\leanname{point_combinedVectorField_dynamic_basis} proves that the result
+is exactly the intended linked vector field with parameters (7.6).
+
+The maps \leanname{TwoControllerLinkedJacobiPolynomialCode.point} and
+\leanname{TwoControllerLinkedJacobiPolynomialCode.state} are inverse.
+Consequently,
+\leanname{TwoControllerLinkedJacobiPolynomialCode.realize_fieldCode_arbitrary}
+proves the complete field semantics at every point of \(\R^{36}\), not
+only on the two controller tori or on the linked residual variety.
+The code-producing map is primitive recursive in the two rational
+parameters \(p_\Omega,p_N\).
+
+The degree bookkeeping distinguishes two notions.  In the controller
+variables and the linked target variables separately, the complete field
+has bidegree at most
+\[
+ (\deg_{\rm controller},\deg_{\rm linked})\leq(3,8).
+\tag{7.7}
+\]
+The dynamically scaled linked coordinates themselves have bidegree at
+most \((1,8)\).  Ordinary total degree is therefore at most \(9\), and
+\emph{not} \(8\): multiplying a linked monomial of degree \(8\) by a
+controller-linear clock genuinely produces degree \(9\).  These raw sparse
+list bounds are theorems in
+\leanmodule{HGAS/Modular/TwoControllerLinkedJacobiPolynomialDegrees.lean};
+the reusable bidegree closure calculus is in
+\leanmodule{HGAS/Algebra/PolynomialBlockDegrees.lean}.
+
+This closes the dynamic finite-code coupling for the two clock parameters.
+It still does not prove that the analytic recurrent selector lands on the
+linked residual set, nor does it construct the physical detector and
+right-hand-side-oscillator factor maps from the resulting compact source.
+
+\subsection{Global projective saturation}
+\label{sec:saturation}
+
+The map
+\[
+\C\longrightarrow\mathbb{CP}^1,\qquad
+z\longmapsto[\vartheta_1(z|\tau):\vartheta_2(z|\tau)]
+\]
+is globally onto.  Rather than rely on a derivative being nonzero, the
+formal proof uses the complex open mapping theorem.
+
+First, the two theta functions have no common zero and are not globally
+proportional.  Their ratio is therefore open in either projective chart.
+Second, level-two quasiperiodicity reduces every value to a compact
+fundamental rectangle, so the range is compact and hence closed.  A
+nonempty subset of \(\mathbb{CP}^1\) that is both open and closed is the
+whole connected projective line.
+
+The topology is isolated in the reusable module
+\leanmodule{HGAS/Topology/ComplexProjectiveLine.lean}.  The theta-specific
+result is then strengthened algebraically.  Given a nonzero vector on the
+two residual quadrics, match its first two coordinates projectively.
+Subtracting the residual equations forces each of the last two coordinates
+to agree up to sign.  The four sign patterns are realized by \(z\),
+\(\tau-z\), \(z+1\), and \((\tau-z)+1\), with the appropriate common
+multiplier.
+
+The exact endpoints in
+\leanmodule{HGAS/Modular/JacobiThetaProjectiveSurjectivity.lean} are
+\leanname{exists_smul_jacobiThetaVector_eq_of_residual},
+\leanname{projectiveJacobiTheta_surjective_onto_residualCurve}, and
+\leanname{range_projectiveJacobiTheta_eq_residualCurve}.  They are packaged
+for the selector by
+\leanname{canonicalJacobiProjectiveCoverage} and
+\leanname{pointwiseJacobiBlochSaturation} in
+\leanmodule{HGAS/Modular/JacobiPointwiseSaturationUnconditional.lean}.
+
+This is a set-theoretic global saturation theorem.  It does not by itself
+classify recurrent polynomial states, choose a measurable theta parameter,
+or prove a statement about invariant measures.
+
+The analytic ingredients in this open-and-closed argument are standard
+one-variable complex analysis; see, for example,
+Ahlfors~\cite[pp.~271--274]{Ahlfors1966}.
+
+\section{The modular quotient and the remaining classification}
+\label{sec:open-classification}
+
+\subsection{What is already constructed}
+
+The quotient
+\[
+\Gamma(2)\backslash\mathrm{SL}_2(\R)
+\]
+and its right-unipotent horocycle flow are constructed in
+\leanmodule{HGAS/Modular/GammaTwoFrameQuotient.lean}.  The proof establishes
+proper discontinuity of the arithmetic action, the quotient-covering
+topology, continuity of right multiplication, every fixed nonzero time
+scale, and projection to the upper-half-plane quotient.
+
+For an arbitrary continuous real flow, the reusable module
+\leanmodule{HGAS/Dynamics/PeriodicOrbitMeasure.lean} constructs normalized
+arclength probability on a periodic orbit, proves invariance, proves the
+integral formula, and proves uniqueness among invariant probabilities
+carried by that orbit.
+
+The file
+\leanmodule{HGAS/Modular/HorocycleMeasureClassification.lean} defines the
+precise alternatives:
+\[
+\text{ergodic invariant probability}
+\quad=\quad
+\begin{cases}
+\text{normalized probability on a closed horocycle},\\
+\text{right-invariant frame probability}.
+\end{cases}
+\]
+All changes by a nonzero constant speed and all normalized periodic-orbit
+conclusions are proved.
+
+\subsection{The conditional recurrent-measure bridge}
+
+The formal development now carries the pure classification hypothesis all
+the way through an arbitrary state-space factor map.  For a state flow
+\(\Psi\), a real scale \(s\), and an observation
+\[
+\pi:S\longrightarrow\Gamma(2)\backslash\mathrm{SL}_2(\R),
+\]
+the proposition \leanname{IsModularHorocycleFactorMap} records two concrete
+facts: \(\pi\) is continuous, and
+\[
+\pi(\Psi_t x)=h_{st}(\pi(x))
+\quad\text{for every \(t\in\R\) and \(x\in S\)}.
+\tag{8.1}
+\]
+Here \(h\) denotes the unit-speed quotient horocycle flow.  The
+\leanname{modularHorocycleMarginal} of a state probability is simply its
+pushforward by \(\pi\).  Equivariance proves that the marginal of an
+ergodic \(\Psi\)-invariant probability is an ergodic
+\(h_{s\cdot}\)-invariant probability; this is
+\leanname{IsModularHorocycleFactorMap.ergodicMarginal}.
+
+Now assume, explicitly,
+\[
+h_{\rm DS}:\leanname{GammaTwoDaniSmillieTheorem},
+\qquad s\ne0.
+\]
+Then
+\leanname{GammaTwoDaniSmillieTheorem.classifyErgodicStateMarginal} gives a
+complete dichotomy for the pushforward.  Either it is canonical normalized
+arclength on a periodic horocycle, or it is the classified normalized
+right-invariant frame probability.  In the first branch the conclusion is
+stronger than a statement about the marginal: the original state measure
+has mass one on the inverse image of that periodic orbit.  This support
+property is packaged as \leanname{IsCarriedOverClosedHorocycle}.
+
+There is also a recurrent form.  On a second-countable pseudometric Borel
+state space,
+\leanname{GammaTwoDaniSmillieTheorem.classifyErgodicRecurrentStateMarginal}
+combines the dichotomy with Poincar\'e recurrence: for almost every state,
+both its state orbit and its observed modular orbit are forward recurrent
+at time zero.  Recurrence downstairs follows from (8.1) and continuity,
+not from a separate recurrence assumption.
+
+For globally trivial finite-sheet models
+\[
+\bigl(\Gamma(2)\backslash\mathrm{SL}_2(\R)\bigr)\times\operatorname{Fin}(n)
+\]
+with a finite permutation skew-product flow, the first projection is proved
+to be such a factor map by
+\leanname{finitePermutationSkewProductModularFactor}.  Consequently the
+classification and recurrent classification specialize to theorems
+\leanname{GammaTwoDaniSmillieTheorem.classifyErgodicFinitePermutationCover}
+and
+\leanname{GammaTwoDaniSmillieTheorem.classifyErgodicRecurrentFinitePermutationCover}.
+Conversely,
+\leanname{GammaTwoDaniSmillieTheorem.classifyAndLiftErgodicModularProbability}
+lifts any ergodic modular probability to a chosen global sheet, preserves
+its first marginal and ergodicity, proves almost-everywhere recurrence
+upstairs, and applies the same conditional dichotomy.
+
+Every implication in this subsection is kernel checked in
+\leanmodule{HGAS/Modular/RecurrentMeasureClassification.lean}.  Its
+hypotheses are essential and remain visible.  The file neither proves
+\leanname{GammaTwoDaniSmillieTheorem} nor constructs the paper-specific
+theta-state map \(\pi\) and proves (8.1).  Moreover, its finite-cover
+specialization is the honest global product with \(\operatorname{Fin}(n)\);
+it is not a measurable lifting theorem for an arbitrary nontrivial
+connected finite cover.  Thus these are \statusinterface{} results: the
+measure-theoretic transport is finished once the deep classification and
+the concrete factor map are supplied.
+
+\subsection{Open theorem A: Dani--Smillie/Hubbard--Miller}
+
+\statusopen\quad The proposition
+\leanname{GammaTwoDaniSmillieTheorem} has not yet been proved.  Closing it
+requires finite covolume for \(\Gamma(2)\) and the invariant-measure
+classification (or a strong enough equidistribution theorem) for the
+horocycle flow.  This is the deep literature input of
+Dani--Smillie~\cite{DaniSmillie1984} and
+Hubbard--Miller~\cite{HubbardMiller2010}.
+
+The project has also formalized the analytic core of the Haar-exclusion
+argument.  In
+\leanmodule{HGAS/Dynamics/CuspMeasureDivergence.lean}, a cusp measure with
+density \(y^{-2}\dd y\) is shown to have divergent \(y^M\)-moment for
+\(M\geq2\).  In \leanmodule{HGAS/Modular/HaarExclusion.lean}, theta cusp
+asymptotics give the required lower bound, and arbitrary joinings are
+handled by pushforward monotonicity of lower integrals.  The endpoint
+\leanname{haarMarginal_reciprocalSlowdown_lintegral_eq_top} is factored by
+an explicit cusp-marginal domination hypothesis.  Still open are the
+Iwasawa cusp formula for the actual quotient Haar probability and the
+wiring of the modular coordinate to the mixed compactification slowdown.
+
+\subsection{Open theorem B: recurrent state-map and selector wiring}
+
+\statusopen\quad Even after the pure horocycle theorem, the following
+paper-specific bridges remain:
+\begin{enumerate}
+\item reconstruct the recurrent generic unary modular polynomial state
+from a frame-quotient point, including multiplier and deck data;
+\item prove properness/finite-cover properties of that concrete state map
+and identify it with either the globally trivial finite-skew-product
+interface above or a separately proved nontrivial-cover lifting theorem;
+\item combine the unconditional projective Jacobi saturation with global
+continuation of the commuting modular and elliptic derivations;
+\item exclude nonreal Bloch escape and degenerate branches for recurrent
+states;
+\item connect the finite moment selector to invariant/time averages and
+the reflected branch.
+\end{enumerate}
+
+Several pieces are already available.  Degenerate unary divisors are
+handled in \leanmodule{HGAS/Modular/UnaryDegenerateRecurrence.lean}.
+Cesaro extraction for absolutely summable exponential series is proved as
+\leanname{naturalCesaroMean_exponentialSeries_tendsto}.  The exact
+quadratic resonance table is in
+\leanmodule{HGAS/Modular/JacobiMomentResonance.lean}, and the reflected
+trace reindexing is
+\leanname{reflectedJacobiTrace_eq_canonical}.  These theorems begin from an
+explicit Bloch expansion; obtaining that expansion from an arbitrary
+recurrent polynomial state is the missing selector theorem.
+
+The relevant classical differential systems are discussed in
+Brezhnev--Lyakhovich--Sharapov~\cite{BrezhnevLyakhovichSharapov2011} and
+Brezhnev~\cite{Brezhnev2013}.  Their use in the final proof cannot be
+replaced by a citation inside Lean: the required consequences must be
+proved in the project, or derived from independently formalized versions.
+
+\section{Compactification and the accumulator}
+\label{sec:compact}
+
+\subsection{Stereographic compactification}
+
+For \(z\in\R^m\), set
+\[
+u(z)=\frac{2z}{1+\|z\|^2},\qquad
+w(z)=\frac{1-\|z\|^2}{1+\|z\|^2}.
+\]
+Then \(\|u\|^2+w^2=1\), and \(z=u/(1+w)\) away from the point
+\((u,w)=(0,-1)\).  If the affine drift is \(g\), differentiation gives the
+polynomial tangent field
+\[
+\dot u=(1+w)g-(u\cdot g)u,\qquad
+\dot w=-(1+w)(u\cdot g).
+\]
+The point at infinity is an equilibrium.  These identities are proved in
+\leanmodule{HGAS/Compactification/Stereographic.lean}, principally
+\leanname{stereo_mem_sphere}, \leanname{accumulator_tangent},
+\leanname{stereoUDeriv_eq_field}, and
+\leanname{stereoWDeriv_eq_field}.
+
+\subsection{Mixed central clearing}
+
+The source contains both affine blocks and blocks that are already compact.
+Each affine block gains a central sphere coordinate \(w_b\).  A monomial is
+homogenized blockwise, and the common slowdown
+\[
+\kappa\prod_b w_b^M
+\]
+clears every denominator.  The finite syntax and exact chart evaluation are
+implemented in
+\leanmodule{HGAS/Compactification/MixedCentralPolynomialCode.lean}; the
+emitted vector field and tangency identities are in
+\leanmodule{HGAS/Compactification/MixedCentralPolynomialField.lean}.
+
+A delicate point is that chart formulas do not cover the equators
+\(w_b=0\).  The module
+\leanmodule{HGAS/Compactification/MixedCentralPolynomialGlobalTangency.lean}
+proves tangency at \emph{arbitrary} product-sphere points by a direct
+polynomial decomposition.  The endpoints
+\leanname{eval₂Hom_fieldCode_chartPoint},
+\leanname{fieldCode_target_tangent_chartPoint}, and
+\leanname{fieldCode_sourceTangentAt_chartPoint} therefore include corners
+and equators, not just the finite chart.
+
+\subsection{The compact accumulator}
+
+Given a base drift \(g:B\to\R^m\), the accumulator sphere obeys the
+stereographic field above.  Its finite chart records a primitive
+\(Z(t)=Z(0)+\int_0^t g(b(s))\,\dd s\).  If one coordinate has nonzero mean
+under a base invariant probability, recurrence of a finite accumulator is
+impossible: the primitive grows linearly along recurrent generic points.
+
+The general measure obstruction is formalized in
+\leanmodule{HGAS/Accumulator/CompactDriftObstruction.lean}.  In particular,
+\leanname{finiteChart_measure_eq_zero} proves that invariant mass on the
+finite chart vanishes under the nonzero-mean hypothesis.
+
+The reward has three regimes:
+\begin{itemize}
+\item it is uniformly negative on every old compactification boundary;
+\item it is uniformly negative at the accumulator point at infinity;
+\item on a designated finite graph it has a fixed positive margin.
+\end{itemize}
+The abstract sign conclusion is
+\leanname{maximalInvariantAverage_neg_iff_of_compactAccumulatorGap} in
+\leanmodule{HGAS/Accumulator/CompactSignDichotomy.lean}.
+
+\subsection{Why the sign hypothesis is only ergodic}
+
+An earlier, unnecessarily strong formulation asked for a nonzero drift
+coordinate after conditioning \emph{every} invariant probability that gives
+positive mass to the finite chart.  That formulation creates a false
+burden: different ergodic components can carry opposite drifts and cancel
+in a mixture.  The compact-sign proof never needs to rule out such
+cancellation.
+
+The corrected theorem uses the ergodic maximizer from
+Section~\ref{sec:ergodic-maximizer}.  Let \(\mu_\ast\) maximize the reward
+and be ergodic for the full source flow.  The finite chart is measurable and
+invariant, so
+\[
+\mu_\ast(\text{finite chart})\in\{0,1\}.
+\]
+There are only two cases.
+\begin{enumerate}
+\item If the mass is zero, the pointwise boundary estimate gives
+\(\int\mathcal R\,\dd\mu_\ast\leq-\varepsilon\).
+\item If the mass is one, condition on the finite chart and project to the
+base.  The compact-accumulator obstruction says that every drift coordinate
+has mean zero.  A source-specific theorem saying that a positive finite
+conditional of an \emph{ergodic} invariant probability has some nonzero
+drift coordinate gives a contradiction.
+\end{enumerate}
+Thus the maximizing measure must lie in the first case, and the maximal
+reward is at most \(-\varepsilon\).
+
+This proof is
+\leanname{maximalInvariantAverage_le_neg_epsilon_of_compactAccumulator}.
+Its strict two-sided version is
+\leanname{maximalInvariantAverage_neg_iff_of_compactAccumulatorGap}.  In
+both statements the nonzero-mean hypothesis is quantified only over
+\[
+\mu:\leanname{InvariantProbabilityMeasure}(\phi)
+\quad\text{with}\quad
+\leanname{IsErgodicInvariantProbability}(\phi,\mu).
+\]
+No ergodic decomposition and no no-cancellation theorem for arbitrary
+invariant mixtures is assumed.
+
+\section{The concrete compact-accumulator pipeline}
+\label{sec:pipeline}
+
+\subsection{Finite code and degree bounds}
+
+The compiler in
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineCode.lean} combines:
+\[
+\text{mixed compact base field}
+\;+\;\text{slowed drift coordinates}
+\;+\;\text{compact accumulator field}.
+\]
+Its reward is
+\[
+\mathcal R=W_{\mathrm{acc}}+2W_0-1-\varepsilon,
+\]
+where \(W_{\mathrm{acc}}\) is the accumulator's last coordinate and
+\(W_0=\prod_b w_b^2\) is the product of squared central weights.  On a
+finite graph \(W_{\mathrm{acc}}\) is close to \(1\) and \(W_0\) is bounded
+below; on a source face \(W_0=0\); at accumulator infinity
+\(W_{\mathrm{acc}}=-1\).
+
+Exact chart semantics are the theorems
+\leanname{eval₂Hom_fieldCode_base_scaledChart},
+\leanname{eval₂Hom_fieldCode_u_scaledChart},
+\leanname{eval₂Hom_fieldCode_w_scaledChart}, and
+\leanname{eval₂Hom_rewardCode}.  Primitive recursiveness is proved in
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineComputability.lean}.
+The degree module proves the explicit bounds
+\[
+\deg(\text{field})\leq E+kM+3,\qquad
+\deg(\text{reward})\leq\max(1,2k).
+\]
+
+\subsection{A concrete fifty-dimensional static linked-source instance}
+\label{sec:linked-compact-source}
+
+The generic pipeline has now been instantiated with the linked compiler of
+Section~\ref{sec:linked-jacobi-compiler}.  The bookkeeping is completely
+explicit:
+\[
+\begin{array}{c|c}
+\text{quantity}&\text{value}\\ \hline
+\text{real source coordinates \(n\)}&28\\
+\text{real residual drifts \(m\)}&20\\
+\text{affine blocks \(k\)}&1\\
+\text{already compact source blocks \(\ell\)}&0\\
+\text{degree bound and clearing exponent \(E=M\)}&8.
+\end{array}
+\]
+All twenty-eight source coordinates lie in one affine block.  Mixed central
+compactification therefore adds one central coordinate, giving a
+twenty-nine-coordinate compact base.  Stereographically compactifying the
+twenty residual accumulators adds \(20+1=21\) coordinates.  The emitted
+field and reward consequently live on
+\[
+(28+1)+(20+1)=50
+\tag{10.1}
+\]
+real coordinates.
+
+These are literal type-level dimensions in
+\leanmodule{HGAS/Modular/LinkedJacobiCompactSourceCode.lean}, not a
+paper-only count.  The definitions
+\leanname{LinkedJacobiCompactSourceCode.sourceFieldCode} and
+\leanname{LinkedJacobiCompactSourceCode.residualCode} insert the exact
+twenty-eight-dimensional linked field and its twenty scalar residuals.
+The runtime input consists of the two Gaussian-rational clock coefficients,
+a rational accumulator scale, and a rational strict-sign margin.
+\leanname{LinkedJacobiCompactSourceCode.compile} returns the complete
+fifty-dimensional field code together with its reward code.
+
+The two degree ledgers imply the exact affine-block clearing hypotheses via
+\leanname{LinkedJacobiCompactSourceCode.sourceFieldCode_termsAffineBlockDegreeLE}
+and
+\leanname{LinkedJacobiCompactSourceCode.residualCode_termsAffineBlockDegreeLE}.
+Specializing the generic bounds gives raw degree at most
+\[
+8+1\cdot8+3=19
+\]
+for the emitted field and degree at most \(2\) for the reward (hence the
+single combined compiler bound is \(19\)).  The uncompactified source
+semantics hold at every point of \(\R^{28}\) by
+\leanname{LinkedJacobiCompactSourceCode.complexify_realize_sourceFieldCode}.
+Formation of the whole compact field--reward pair is primitive recursive by
+\leanname{LinkedJacobiCompactSourceCode.compile_primrec}.
+
+This all-affine choice also resolves one otherwise source-specific premise.
+The definition of \leanname{BaseCompactTangency} quantifies only over source
+blocks that were compact before clearing.  Here that index type is
+\(\operatorname{Fin}(0)\), so
+\leanname{LinkedJacobiCompactSourceCode.baseCompactTangency} proves the
+premise by empty elimination.  Thus base compact tangency is fully
+discharged for this concrete linked block.
+
+The scope is nevertheless important.  This is a proved compact
+\emph{compiler instance} for the static unary--Jacobi component.  It does
+not adjoin arithmetic detectors or dynamically coupled controller clocks;
+it does not construct the invariant component and finite primitive required
+by the positive graph; and it does not establish the ergodic nonzero-drift
+alternative.  Accordingly it does not inhabit
+\leanname{CanonicalCompactAccumulatorGap} or
+\leanname{FixedUniversalCompactSignSourceFamily} by itself.
+
+\subsection{A provisional all-affine fifty-eight-dimensional instance}
+\label{sec:dynamic-compact-source}
+
+The dynamic compiler of Section~\ref{sec:dynamic-linked-compiler} has also
+been inserted literally into the same pipeline.  The module
+\leanmodule{HGAS/Modular/TwoControllerLinkedJacobiCompactSourceCode.lean}
+fixes
+\[
+\begin{array}{c|c}
+\text{quantity}&\text{value}\\ \hline
+\text{real source coordinates \(n\)}&36\\
+\text{transported real residuals \(m\)}&20\\
+\text{affine blocks \(k\)}&1\\
+\text{already compact source blocks \(\ell\)}&0\\
+\text{source degree bound}&9\\
+\text{residual degree bound}&4\\
+\text{even clearing exponent \(M\)}&10.
+\end{array}
+\tag{10.2}
+\]
+The twenty residual codes are not reconstructed.  Each is transported from
+the rightmost twenty-eight linked variables into the thirty-six-variable
+space by the generic right-block embedding, so it ignores exactly the
+eight controller--phase coordinates.  The theorems
+\leanname{complexifyPoint_eval_residualCode_arbitrary} and
+\leanname{forall_eval_residualCode_eq_zero_iff_arbitrary} prove,
+respectively, exact evaluation as the ten named complex residuals and the
+equivalence between their vanishing and simultaneous vanishing of the
+twenty real codes at every ambient point.
+
+All thirty-six source coordinates are assigned to one affine block.  The
+source field has raw degree at most \(9\), the residuals have degree at most
+\(4\), and both are promoted to the degree-\(10\) affine-block clearing
+premise.  The kernel proves that \(10\) is even and \(9<10\).  Since there
+are no source blocks declared already compact,
+\leanname{TwoControllerLinkedJacobiCompactSourceCode.baseCompactTangency}
+again closes \leanname{BaseCompactTangency} by eliminating
+\(\operatorname{Fin}(0)\).
+
+The one central source weight and the common accumulator compactification
+give the exact type-level output dimension
+\[
+ (36+1)+(20+1)=58,
+\tag{10.3}
+\]
+proved by
+\leanname{TwoControllerLinkedJacobiCompactSourceCode.finalDimension_eq_fifty_eight}.
+The generic degree ledger, used with the common promoted source/residual
+bound \(E=9\), certifies field degree at most
+\[
+ 9+1\cdot10+3=22
+\]
+and reward degree at most \(2\).  The complete map from
+\((p_\Omega,p_N,\kappa,\varepsilon)\) to the fifty-eight-variable field and
+reward is primitive recursive by
+\leanname{TwoControllerLinkedJacobiCompactSourceCode.compile_primrec}.
+
+This is a stronger concrete compiler instance than (10.1): the two
+controllers are already present and dynamically drive the linked field.
+It is also a mathematically valid compactification.  Its drawback is
+geometric rather than logical: by placing all thirty-six coordinates in
+one affine block, it forgets that the first eight coordinates naturally
+form four invariant circles.  Thus it is useful as a simple executable
+fallback, but it is no longer the preferred layout for transporting the
+clock dynamics.
+
+It is not yet the universal source.  In particular, the arithmetic
+detector, the right-hand-side oscillator, their physical factor maps, the
+selector component, and the two invariant-measure sign alternatives have
+not been composed into this fifty-eight-coordinate object.
+
+\subsection{The geometry-faithful mixed fifty-eight-dimensional instance}
+\label{sec:mixed-dynamic-compact-source}
+
+The preferred construction is
+\leanmodule{HGAS/Modular/TwoControllerLinkedJacobiMixedCompactSourceCode.lean}.
+It uses the canonical split
+\[
+ \underbrace{\R^8}_{\substack{\text{two controller--phase blocks}\\
+                              \text{four compact circles}}}
+ \times
+ \underbrace{\R^{28}}_{\text{one affine linked-Jacobi block}} .
+\]
+Within each four-coordinate clock block, \((r,s)\) is one compact circle
+and \((c,d)\) is the second.  The two clock blocks therefore give four
+already compact source blocks.  Only the rightmost twenty-eight linked
+coordinates are centrally compactified.  The reusable layout and its
+degree-transfer lemmas are in
+\leanmodule{HGAS/Compactification/RightAffineLeftCompactLayout.lean}.
+
+This distinction improves the clearing exponent.  The complete source has
+controller/right-linked bidegree at most \((3,8)\), while the residuals have
+bidegree at most \((0,4)\).  Denominators arise only from the right affine
+variables, so ordinary total degree \(9\) is not the relevant clearing
+quantity.  The even exponent
+\[
+ M=8
+\]
+already dominates every affine-block degree.  The exact endpoints are
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.sourceFieldCode_termsAffineBlockDegreeLE}
+and
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.residualCode_termsAffineBlockDegreeLE}.
+
+The nonvacuous issue is tangency to the four inherited circles at the
+affine equator.  First,
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.sourceFieldCode_compactBlockDot}
+proves the original
+thirty-six-dimensional field tangent to each circle at every ambient
+point.  Second, every output coordinate belonging to a compact circle has
+right-affine degree \(0\), as recorded by
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.sourceFieldCode_termsAffineDegreeZero_of_compact}.
+Consequently
+denominator clearing multiplies the compact-circle velocity by the common
+slowdown without introducing an equator remainder.
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.clearedSourceVelocity_compactBlockDot}
+proves the resulting dot
+product is zero for arbitrary chart coordinates, including \(w=0\), and
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.baseCompactTangency}
+supplies the pipeline premise globally.  No division by the central
+coordinate and no interior-chart assumption occurs.
+
+There is still one affine central coordinate, so the numerical output
+dimension is unchanged:
+\[
+ (36+1)+(20+1)=58.
+\]
+Geometrically, however, the compact base now has five sphere blocks: four
+inherited circles and one sphere compactifying the linked block.  The
+accumulator contributes a sixth sphere.  These counts are kernel-checked
+by \leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.sphereBlockCounts}.
+Using the common total-degree bound \(E=9\), the generic ledger gives field
+degree at most
+\[
+ 9+1\cdot8+3=20
+\]
+and reward degree at most \(2\).  Exact residual semantics, the
+fifty-eight-coordinate type identity, and primitive-recursive compilation
+are respectively exposed by
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.forall_eval_residualCode_eq_zero_iff_arbitrary},
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.finalDimension_eq_fifty_eight},
+and
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.compile_primrec}.
+
+This mixed compiler faithfully preserves the clock product geometry needed
+by the analytic Haar theorem.  It still does not construct the complete
+semiconjugacy from the compactified polynomial source to the analytic clock
+flow, nor does it add the detector, oscillator, or source-specific sign
+certificates.
+
+\subsection{Global tangency and boundary reward}
+
+The complete product-sphere tangency theorem is
+\leanname{CompactAccumulatorPipelineCode.fieldCode_sourceTangentAt} in
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineTangency.lean}.
+It is a global pointwise result, including all equators and corners.  Its
+sole source-specific premise is tangency of those source blocks that were
+already compact before mixed-central clearing.  The gap module names this
+visible premise \leanname{BaseCompactTangency}; it is not silently produced
+by the generic compiler.
+
+The reward bounds are in
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineReward.lean}:
+\leanname{eval₂Hom_rewardCode_le_neg_epsilon_on_sourceFace},
+\leanname{eval₂Hom_rewardCode_le_neg_epsilon_at_infinity}, and
+\leanname{finiteGraphGap_le_eval₂Hom_rewardCode}.
+
+\subsection{Interior invariance and the base factor}
+
+The file
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineInterior.lean}
+defines the finite interior as the complement of all source equators and
+accumulator infinity.  Every boundary component is invariant because its
+defining coordinate solves a scalar linear equation \(y'=a(t)y\); uniqueness
+forces a zero initial value to remain zero.  Theorems
+\leanname{isInvariant_sourceBoundarySet} and
+\leanname{isInvariant_sourceFiniteInteriorSet} formalize the union and
+complement statements.  The same module proves the pointwise bound
+\leanname{sourceRewardBCF_le_neg_epsilon_of_not_mem_finiteInterior}.
+
+On the finite interior, the full flow factors through the compact base.
+The module
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineFactor.lean} constructs:
+\begin{itemize}
+\item the continuous base projection \leanname{baseProjection};
+\item the canonical base flow \leanname{baseFlow};
+\item the semiconjugacy \leanname{baseProjection_flow_eq} and its restricted
+form \leanname{canonicalRestrictedBaseProjection_semiconj};
+\item the finite accumulator projection
+\leanname{finiteAccumulatorProjection};
+\item the actual bounded continuous base drift \leanname{baseDriftBCF};
+\item the \(u\)- and \(w\)-coordinate ODEs
+\leanname{canonicalFiniteAccumulator_u_hasDerivAt} and
+\leanname{canonicalFiniteAccumulator_w_hasDerivAt}.
+\end{itemize}
+The semiconjugacy is proved by ODE uniqueness, not by comparing only formal
+expressions on a dense chart.
+
+\subsection{Finite graphs on one invariant base component}
+\label{sec:component-graph}
+
+A positive finite graph should not be required over the whole compact base.
+The canonical no-instance primitive is expected only on one selected
+modular/Jacobi component, while unrelated components can meet central
+equators.  A global positive lower bound for the central-weight product
+would therefore be both unnatural and, in the presence of such equators,
+impossible.
+
+The module
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineComponentGraph.lean}
+implements the correct local interface.  A
+\leanname{BaseInvariantComponent} consists of a measurable invariant subset
+\(C\) of the compact base.  Its subtype \leanname{BaseInvariantComponent.Space}
+carries the restricted flow \leanname{BaseInvariantComponent.flow}.  One
+then supplies a continuous primitive
+\[
+z:C\longrightarrow\R^m
+\]
+whose derivative along the restricted flow is the compiled base drift:
+\[
+\frac{\dd}{\dd t}z_i(\phi_t b)=g_i(\phi_t b).
+\]
+No value or extension of \(z\) outside \(C\) is chosen.
+
+Inverse stereographic projection gives the graph
+\[
+G(b)=\bigl(b,u(z(b)),w(z(b))\bigr)
+\]
+inside the complete product-sphere source.  The theorem
+\leanname{componentFiniteGraphPoint_isIntegralCurve} checks every emitted
+polynomial coordinate: the base coordinates use the base flow, and the
+accumulator coordinates use the exact derivatives of \(u\) and \(w\).
+The theorem \leanname{componentFiniteGraphPoint_flow_eq} then invokes ODE
+uniqueness on the closed unit ball to identify this explicit graph
+trajectory with the canonical complete source flow.  Equivariance is
+packaged as \leanname{componentFiniteGraphPoint_semiconj}.
+
+Consequently any invariant probability \(\eta\) for the restricted flow on
+\(C\) pushes through \(G\) to an invariant probability of the \emph{complete}
+source; this is \leanname{componentFiniteGraphInvariantProbability}.  The
+quantitative hypotheses may also be restricted to this one probability.
+If, \(\eta\)-almost everywhere,
+\[
+\|z(b)\|^2\leq \frac{w_\ast}{4},
+\qquad
+w_\ast\leq W_0(b),
+\]
+then
+\[
+\frac{3w_\ast}{2}-\varepsilon
+\leq
+\int\mathcal R\,\dd(G_\ast\eta).
+\tag{10.4}
+\]
+The pointwise algebra behind (10.4) uses the inverse-stereographic lower
+bound for \(w(z)\) and the reward formula
+\(\mathcal R=W_{\rm acc}+2W_0-1-\varepsilon\).  The integrated result is
+\leanname{componentFiniteGraphInvariantProbability_reward_lower_ae}; the
+existence-shaped endpoint is
+\leanname{exists_componentFiniteGraphInvariantProbability_reward_lower_ae}.
+Notice that neither inequality is asserted on the rest of the ambient base.
+
+For source assembly, \leanname{ComponentFiniteGraphCertificate} packages
+the component, primitive, derivative equation, component invariant
+probability, \(w_\ast\), and the two almost-everywhere bounds.  Its endpoint
+\leanname{ComponentFiniteGraphCertificate.exists_sourceProbability_reward_lower}
+returns exactly the complete-source invariant probability and reward lower
+bound needed downstream.  The bridge
+\leanname{CanonicalCompactAccumulatorGap.finite_graph_of_componentFiniteGraphCertificate}
+converts such a certificate into the positive-graph field of the canonical
+gap structure after checking the desired margin \(\delta\).
+
+Every graph, ODE, equivariance, pushforward, and reward theorem in this
+subsection is kernel checked.  What remains open is source specific:
+construct the canonical component \(C\), its primitive \(z\), its invariant
+probability, and the two quantitative bounds from the modular/Jacobi
+selector.  The definition of
+\leanname{ComponentFiniteGraphCertificate} does not assert that these data
+exist.
+
+\subsection{The exact remaining semantic gap}
+\label{sec:open-source}
+
+After the separately visible source premise
+\leanname{BaseCompactTangency} has been supplied, the remaining hypotheses
+are collected in
+\leanmodule{HGAS/Compiler/CompactAccumulatorPipelineGapCertificate.lean}.
+The structure \leanname{CanonicalCompactAccumulatorGap} has exactly two
+source-specific dynamical obligations:
+
+\begin{enumerate}
+\item \textbf{Nonzero mean in a solvable instance.}  Every
+\emph{ergodic} invariant probability giving positive mass to the finite
+interior has, after conditioning and projection to the base, some drift
+coordinate of nonzero mean.
+\item \textbf{Positive finite graph in an unsolvable instance.}  There is
+an invariant probability on the designated finite graph whose reward has a
+fixed positive lower bound.
+\end{enumerate}
+
+The word ``ergodic'' in the first field is essential and is present in the
+actual Lean structure.  Section~\ref{sec:ergodic-maximizer} explains why
+this weaker, correct quantifier is sufficient.  Requiring the conclusion
+for all invariant mixtures would add an unproved and unnecessary
+no-cancellation assertion.  For the second field,
+\leanname{finite_graph_of_componentFiniteGraphCertificate} supplies the
+measure-level conclusion from the component data of
+Section~\ref{sec:component-graph}.
+
+Given these two fields,
+\leanname{CanonicalCompactAccumulatorGap.toCompactSignSourceCertificate}
+automatically supplies tangency, finite-interior invariance, the factor map,
+the accumulator equations, and boundary negativity.  The conditional
+endpoint is
+\leanname{CanonicalCompactAccumulatorGap.finalField_gas_iff_solvable}.
+
+\statusopen\quad The universal arithmetic construction does not yet supply
+an inhabitant of \leanname{CanonicalCompactAccumulatorGap}.  This is where
+the all-state modular/Jacobi selector, the required Haar exclusion,
+detector realization, physical/additive normalization of the
+right-hand-side oscillator, the canonical no-instance component
+certificate, and the ergodic nonzero-mean theorem must be assembled.  The
+controller part of this measure argument is no longer open:
+\leanname{exists_lockedController_sign_and_phaseHaar} supplies the common
+locked-sign tuple, the almost-everywhere locked-fibre semiconjugacy, and
+the Haar phase marginal for the literal coupled clock flow.  What remains
+is to construct the exact factor from the complete compactified
+modular/Jacobi/detector source to that flow and transport the conclusion
+through the chosen interior component.
+
+The visible base-tangency premise has already been discharged for the
+static all-affine twenty-eight-dimensional linked block by
+\leanname{LinkedJacobiCompactSourceCode.baseCompactTangency}, and the
+provisional all-affine thirty-six-dimensional two-controller block by
+\leanname{TwoControllerLinkedJacobiCompactSourceCode.baseCompactTangency}.
+More importantly, the geometry-faithful layout with four inherited circles
+and one affine linked block has the nonvacuous global theorem
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.baseCompactTangency},
+including the affine equator.  None of these facts automatically supplies
+tangency after detector and oscillator coordinates are added or if the
+final source chooses a different enlarged layout.  The general
+component-graph and ergodic-maximizer mechanisms are no longer missing.
+This source-specific assembly is the first missing link between the fixed
+DQL theorem of Section~\ref{sec:arithmetic} and the homogeneous GAS field.
+
+\section{The homogeneous product-sphere wrapper}
+\label{sec:wrapper}
+
+The wrapper is complete independently of the open source assembly.
+Its input is:
+\begin{itemize}
+\item a rational polynomial flow tangent to a product of sphere blocks;
+\item a rational polynomial reward \(a\);
+\item an odd chart degree \(D\);
+\item a source flow solving the literal polynomial ODE.
+\end{itemize}
+
+\subsection{Two sheets and polynomial charting}
+
+An extra chart coordinate \(z\) is added.  On the normalized unit sphere,
+the full stratum has two sheets \(z=\pm1/\sqrt L\), where \(L\) is the
+number of blocks.  A source monomial of degree at most \(D\) is homogenized
+with powers of \(z\).  Because \(D\) is odd,
+\[
+L^{(D-1)/2}z^{D-1}=1
+\]
+on both sheets.  Hence the positive and negative sheets carry the same
+source time orientation and the same reward, while all emitted
+coefficients remain rational.
+
+The sparse code is built in
+\leanmodule{HGAS/Wrapper/UnitSpherePolynomialWrapper.lean}.  The final code
+\leanname{finalFieldCode} is proved homogeneous by
+\leanname{finalFieldCode_isHomogeneous_of_degreeBounds}; its target degree
+is proved odd by \leanname{targetDegree_odd}.
+
+\subsection{Radius cleanup and invariant faces}
+
+Let \(s_i\) be the scaled squared radius of block \(i\).  The cleanup field
+is arranged so that a nonnegative dissipation vanishes precisely when each
+radius is either \(0\) or \(1\).  Integrating the derivative identity
+against an invariant probability forces the dissipation to vanish almost
+everywhere.  Thus almost every point belongs either to:
+\[
+\text{the full stratum }(s_i=1\ \forall i),
+\quad\text{or a proper face }(s_i=0\text{ for some }i).
+\]
+This classification is proved in
+\leanmodule{HGAS/Wrapper/RadiusInvariantFaces.lean}.
+
+The wrapper reward equals the source reward on the full stratum and equals
+\(-1\) on every proper face.  Splitting an arbitrary invariant probability
+between these two invariant pieces gives the exact maximal-average formula
+\[
+\beta_{\mathrm{wrapper}}=\max\{\beta_{\mathrm{source}},-1\}.
+\]
+The measure decomposition and attainment proof are in
+\leanmodule{HGAS/Wrapper/InvariantAverage.lean} and the concrete sheet
+transport is in
+\leanmodule{HGAS/Wrapper/UnitSphereWrapperInvariantAverage.lean}.
+
+\subsection{The GAS equivalence}
+
+The positive and negative sheet flows are shown to solve the same source
+polynomial ODE.  ODE uniqueness proves that they coincide after pullback;
+see \leanname{positiveSourceFlow_isIntegralCurve_sourceField} and
+\leanname{positiveSourceFlow_eq_negativeSourceFlow} in
+\leanmodule{HGAS/Wrapper/UnitSphereWrapperSourceFlow.lean}.
+
+The final concrete theorem is
+\[
+\boxed{
+\text{the wrapped homogeneous polynomial field is GAS}
+\Longleftrightarrow
+\text{the source maximal invariant reward is negative}.}
+\]
+Its Lean name is
+\leanname{realize_finalFieldCode_gas_iff_externalSourceMaximum_neg} in
+\leanmodule{HGAS/Wrapper/UnitSphereWrapperConcreteReduction.lean}.
+
+The compiler-facing structure
+\leanname{CompactSignSourceCertificate} and its endpoint
+\leanname{CompactSignSourceCertificate.finalField_gas_iff_solvable} occur
+in \leanmodule{HGAS/Compiler/CompactSignSourceWrapper.lean}.  Once the open
+gap certificate of Section~\ref{sec:open-source} is constructed, no
+wrapper-side dynamics or measure theory remains.
+
+\section{Effective cubicization}
+\label{sec:cubic}
+
+Suppose \(F:\R^n\to\R^n\) is homogeneous of odd degree \(2k+1\).  Let
+\[
+\nu_k(x)=(x^\alpha)_{|\alpha|=k}
+\]
+be the degree-\(k\) Veronese map.  Its coordinates satisfy finitely many
+quadratic toric relations.  Differentiating \(\nu_k(x(t))\) along
+\(\dot x=F(x)\) produces expressions of degree \(3k\), which can be
+factored into cubic polynomials in the variables \(y_\alpha=x^\alpha\).
+This gives a cubic vector field \(G\) satisfying
+\[
+D\nu_k(x)\,F(x)=G(\nu_k(x)).
+\]
+This construction is logically separate from earlier complexity results
+for cubic homogeneous stability, such as Ahmadi~\cite{Ahmadi2012}: here the
+task is an exact GAS-preserving compiler from every fixed odd degree to
+degree three.
+
+\subsection{Geometry and transverse stabilization}
+
+The real Veronese cone is the common zero set of explicit quadratic
+relations.  Merely extending the source dynamics to an ambient cubic
+field is not enough: trajectories away from the cone could spoil GAS.
+The construction therefore adds a cubic negative gradient of the squared
+quadratic residuals.  Near the cone this supplies normal contraction; away
+from it, compactness gives a uniform penalty.
+
+The geometric development occupies \leanmodule{HGAS/Veronese}.  The
+central semantic equivalence is
+\leanname{sourceGAS_iff_stabilizedCubicGAS} in
+\leanmodule{HGAS/Veronese/CubicLiftGASConjugacy.lean}.  Its proof uses:
+\begin{itemize}
+\item exact conjugacy on the real cone;
+\item a Morse--Bott-type coercive estimate transverse to the cone;
+\item an invariant-measure sandwich showing that invariant mass outside the
+controlled cone tube vanishes;
+\item the maximal-angular-average GAS criterion of Section~\ref{sec:problem}.
+\end{itemize}
+
+The algebraic background is classical Veronese geometry; see
+Hartshorne~\cite{Hartshorne1977} and Sturmfels~\cite{Sturmfels1996}.  The
+formal development proves the particular finite toric and differential
+identities needed here.
+
+\subsection{A computable stabilizing gain}
+
+A semantic compactness proof could choose a real gain nonconstructively,
+which would be useless for a many-one reduction.  The effective module
+\leanmodule{HGAS/Computability/CubicLiftEffectiveGain.lean} instead bounds
+all source-dependent terms linearly by the coefficient \(\ell^1\)-mass.
+Geometry-dependent constants are frozen for fixed \(n,k\), and the input
+code supplies an explicit rational majorant.
+
+The gain code \leanname{effectiveCubicGainCode} is primitive recursive and
+positive.  The total compiler \leanname{effectiveCubicReductionCode}
+includes a malformed-input guard, emits a syntactically homogeneous cubic
+field for every raw input, and satisfies
+\[
+\leanname{HGASQ n (2*k+1) F}
+\Longleftrightarrow
+\leanname{HGASQ N3 3 (effectiveCubicReductionCode F)}.
+\]
+The exact theorems are
+\leanname{effectiveCubicReductionCode_hgasQ_iff} and
+\leanname{hgasQ_manyOneReducible_cubic}.  Sparse polynomial realization is
+verified in
+\leanmodule{HGAS/Computability/CubicLiftCodeCompiler.lean}.
+
+The effectivity statement is fixed-parameter, exactly as required for a
+fixed-language many-one reduction.  The geometric natural-number multiplier
+in \leanname{fixedCubicGainParameters} is selected nonuniformly once
+\((n,k)\) is fixed.  It is then a hard-coded constant, and the resulting map
+of input field codes is proved computable.  The present theorem does not
+compute a numerical multiplier uniformly from varying \(n,k\).
+
+\section{Dimension and degree propagation}
+\label{sec:propagation}
+
+\subsection{Adding dimensions}
+
+To add \(p\) coordinates, take the direct product of a cubic field \(G(y)\)
+with independent cubic sinks
+\[
+\dot z_j=-z_j^3.
+\]
+The sink is forward complete, stable, and globally attractive.  The direct
+product is GAS exactly when \(G\) is GAS.
+
+\subsection{Raising odd degree}
+
+For \(j\geq0\), multiply the entire product field by
+\[
+\bigl(\|y\|^2+\|z\|^2\bigr)^j.
+\]
+Away from the origin this is a positive state-dependent time change, so it
+does not change orbits or their limiting behavior.  At the origin the
+homogeneous extension is still a polynomial field.  Therefore a cubic
+field is GAS exactly when the resulting field of degree \(3+2j\) is GAS.
+The semantic statement is \leanname{degreePaddedField_gas_iff} in
+\leanmodule{HGAS/Propagation/DegreePaddingGAS.lean}.
+
+\subsection{The finite compiler}
+
+The code module
+\leanmodule{HGAS/Propagation/DegreePaddingCode.lean} proves exact coordinate
+insertion, decoding, homogeneity, realization, primitive recursiveness, and
+the GAS equivalence.  Combining it with cubicization gives
+\leanname{oddToCofinalCode}.  For all raw inputs,
+\[
+\HGAS_{\Q}(n,2k+1;F)
+\Longleftrightarrow
+\HGAS_{\Q}\bigl(N, d;
+  \leanname{oddToCofinalCode}(F)\bigr)
+\]
+whenever the target dimension is large enough and \(d\geq3\) is odd.
+
+The principal many-one theorem is
+\leanname{hgasQ_manyOneReducible_cofinalFixedPair} in
+\leanmodule{HGAS/Propagation/CofinalFixedPairReduction.lean}.  The final
+recursion-theoretic composition
+\leanname{sigmaOneComplete_cofinalFixedPair_of_universalHalts_reduction}
+is in \leanmodule{HGAS/Propagation/CofinalSigmaOne.lean}.
+
+Thus cubicization and cofinal propagation are not open mathematical
+steps.  What is missing is the upstream fixed-pair reduction from universal
+halting to one homogeneous GAS language.
+
+\section{What a completed headline theorem will look like}
+\label{sec:headline}
+
+The structure
+\leanname{FixedUniversalCompactSignSourceFamily} in
+\leanmodule{HGAS/Compiler/UnconditionalFixedCompactSignSourceFamily.lean}
+is the precise final source-assembly target.  It asks for:
+\begin{itemize}
+\item one fixed product-sphere layout;
+\item one fixed odd wrapper degree;
+\item for every universal-halting input, a
+\leanname{CompactSignSourceCertificate};
+\item a computable finite map producing the corresponding field and reward
+codes;
+\item equality between those finite codes and the semantic certificate data.
+\end{itemize}
+
+Importantly, the file makes no existence claim.  If a family is supplied,
+the already proved theorem \leanname{fixedPair_sigmaOneComplete} gives
+\(\Sigma^0_1\)-completeness at one fixed dimension and odd degree.  The
+already proved theorem \leanname{cofinal_sigmaOneComplete} then gives
+\(\Sigma^0_1\)-completeness for every sufficiently large fixed dimension
+and every fixed odd degree at least three.
+
+The remaining work can therefore be stated cleanly.
+
+\begin{theorem}[Open integration theorem]
+Construct a fixed product-sphere layout, a fixed odd wrapper degree, and an
+inhabitant of \leanname{FixedUniversalCompactSignSourceFamily} by compiling
+the unconditional fixed DQL family through the modular/Jacobi selector and
+the canonical compact-accumulator gap.  Starting from the proved
+thirty-six-coordinate dynamic linked source and its geometry-faithful
+fifty-eight-coordinate mixed compact pipeline, integrate the physical
+detector and right-hand-side oscillator, construct the exact factor from
+the enlarged source to the already classified coupled controller--phase
+flow, and identify its recurrent modular factor with the Jacobi selector.
+Then construct the remaining
+\leanname{BaseCompactTangency} proof for the final combined layout, the
+\leanname{ComponentFiniteGraphCertificate} in the no-instance case, and the
+corrected ergodic nonzero-mean alternative in the solvable case.
+\end{theorem}
+
+Once this theorem is kernel checked, the final proof is a short composition:
+\[
+\begin{aligned}
+\text{universal halting}
+&\leq_m \text{fixed DQL solvability}\\
+&\leq_m \HGAS_{\Q}(N_\ast,d_\ast)
+\leq_m \HGAS_{\Q}(N,3)
+\leq_m \HGAS_{\Q}(N',d),
+\end{aligned}
+\]
+combined with the c.e. upper bound of Section~\ref{sec:upper}.  Positive
+denominator clearing will give the corresponding integer-coefficient
+statement without changing trajectories.
+
+\section{Module guide}
+
+\begin{center}
+\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.29\textwidth}
+                >{\raggedright\arraybackslash}p{0.48\textwidth}
+                >{\raggedright\arraybackslash}p{0.13\textwidth}}
+\toprule
+Mathematical layer & Principal module or endpoint & Status\\
+\midrule
+GAS definition &
+\leanmodule{Dynamics/Stability.lean} & \statusproved\\
+Angular maximal-average criterion &
+\leanname{globallyAsymptoticallyStable_iff_maximalAngularAverage_neg}
+& \statusproved\\
+Full-flow ergodic maximizer &
+\leanname{exists_ergodicInvariantProbability_isMaxOn_average}
+& \statusproved\\
+Odd-degree c.e. upper bound &
+\leanname{hgasQ_re_of_oddDegree} & \statusproved\\
+Primitive-recursive MRDP &
+\leanname{binaryPrimitiveRecursiveRelationsAreDiophantine}
+& \statusproved\\
+Fixed DQL completeness &
+\leanname{unconditionalFixedDQLSolvability_sigmaOneComplete}
+& \statusproved\\
+Controller and radical clocks &
+\leanmodule{Clocks/ControllerFlow.lean},
+\leanmodule{Clocks/RadicalClock.lean} & \statusproved\\
+Radians/turns normalization and physical phase Haar &
+\leanname{unitAddCircleHomeomorph_semiconj},
+\leanname{physicalSignedRadicalPhase_equivariantMarginal_eq_haar}
+& \statusproved\\
+Fixed-support and controller-atom selection &
+\leanname{exists_eq_diracProba_of_isErgodicInvariantProbability_ae_fixed},
+\leanname{exists_eq_diracProba_at_controllerEquilibrium}
+& \statusproved\\
+Exact coupled controller--phase flow &
+\leanname{controllerPhaseFlow_solves_controllerField},
+\leanname{controllerPhaseFlow_solves_lockedPhaseField}
+& \statusproved\\
+Controller polynomial compiler &
+\leanname{ControllerPolynomialCode.fieldCode_primrec},
+\leanname{ControllerPolynomialCode.fieldCode_termsDegreeLE}
+& \statusproved\\
+Physical-clock detector average &
+\leanname{maximalInvariantAverage_unconditionalUniversalHalting_physicalClocks_iff}
+& \statusproved\\
+RHS oscillator polynomial compiler &
+\leanname{RHSOscillatorPolynomialCode.realize_fieldCode},
+\leanname{RHSOscillatorPolynomialCode.fieldCode_primrec}
+& \statusproved\\
+RHS oscillator graph classification &
+\leanname{rhsErgodicInvariantProbability_graphClassification},
+\leanname{rationalRhsErgodicInvariantProbability_graphClassification}
+& \statusproved\\
+Full coupled locked-sign/Haar composition &
+\leanname{exists_lockedController_sign_and_phaseHaar},
+\leanname{phaseProjection_ae_semiconj} & \statusproved\\
+Theta modular identities &
+\leanmodule{Modular/ThetaDerivativeIdentities.lean},
+\leanmodule{Modular/RamanujanIdentities.lean} & \statusproved\\
+Jacobi Wronskians and Delta identity &
+\leanname{canonicalJacobiThetaWronskiansAt},
+\leanname{jacobiThetaDeltaIdentity} & \statusproved\\
+Ten-coordinate Jacobi compiler &
+\leanmodule{Modular/JacobiPolynomialCode.lean},
+\leanname{JacobiPolynomialCode.compileFieldCode_primrec} & \statusproved\\
+Arbitrary complex-family realification &
+\leanname{ComplexPolynomialFamilyCode.forall_eval_realify_eq_zero_iff},
+\leanname{ComplexPolynomialFamilyCode.realify_primrec} & \statusproved\\
+Linked unary--Jacobi compiler &
+\leanname{LinkedJacobiPolynomialCode.compileFieldCode_primrec},
+\leanname{LinkedJacobiPolynomialCode.forall_eval_realResidualCode_eq_zero_iff}
+& \statusproved\\
+Dynamic 36-coordinate two-controller linked compiler &
+\leanname{TwoControllerLinkedJacobiPolynomialCode.realize_fieldCode_arbitrary},
+\leanname{TwoControllerLinkedJacobiPolynomialCode.fieldCode_termsDegreeLE}
+& \statusproved\\
+Projective Jacobi saturation &
+\leanname{range_projectiveJacobiTheta_eq_residualCurve}
+& \statusproved\\
+Horocycle classification &
+\leanname{GammaTwoDaniSmillieTheorem} & \statusopen\\
+Conditional recurrent marginal classification &
+\leanname{GammaTwoDaniSmillieTheorem.classifyErgodicRecurrentStateMarginal}
+& \statusinterface\\
+All-state selector/state map &
+No completed endpoint & \statusopen\\
+Mixed compactification and pipeline factor &
+\leanmodule{Compiler/CompactAccumulatorPipelineFactor.lean}
+& \statusproved\\
+Concrete 50-dimensional linked pipeline &
+\leanname{LinkedJacobiCompactSourceCode.compile_primrec},
+\leanname{LinkedJacobiCompactSourceCode.baseCompactTangency}
+& \statusproved\\
+Provisional all-affine 58-dimensional pipeline &
+\leanname{TwoControllerLinkedJacobiCompactSourceCode.compile_primrec},
+\leanname{TwoControllerLinkedJacobiCompactSourceCode.finalDimension_eq_fifty_eight}
+& \statusproved\\
+Geometry-faithful mixed 58-dimensional pipeline &
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.baseCompactTangency},
+\leanname{TwoControllerLinkedJacobiMixedCompactSourceCode.compile_primrec}
+& \statusproved\\
+Ergodic-only compact sign theorem &
+\leanname{maximalInvariantAverage_neg_iff_of_compactAccumulatorGap}
+& \statusproved\\
+Component-restricted finite graph &
+\leanname{ComponentFiniteGraphCertificate.exists_sourceProbability_reward_lower}
+& \statusproved\\
+Arithmetic compact gap &
+\leanname{CanonicalCompactAccumulatorGap} & \statusinterface\\
+Product-sphere wrapper &
+\leanname{realize_finalFieldCode_gas_iff_externalSourceMaximum_neg}
+& \statusproved\\
+Fixed universal source family &
+\leanname{FixedUniversalCompactSignSourceFamily} & \statusinterface\\
+Effective cubicization &
+\leanname{hgasQ_manyOneReducible_cubic} & \statusproved\\
+Cofinal propagation &
+\leanname{hgasQ_manyOneReducible_cofinalFixedPair} & \statusproved\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Concluding perspective}
+
+The formalization has already changed the proof in useful ways.  It forces
+forward completeness to be explicit in the definition of GAS; separates
+finite compilers from noncomputable semantics; replaces vague
+``generic-orbit'' claims by invariant-probability statements; proves that a
+maximal invariant average is realized by a probability ergodic for the full
+real flow; removes an unnecessary no-cancellation quantifier from the
+compact-sign argument; localizes the no-instance finite graph to its actual
+invariant base component; handles compactification equators and wrapper
+faces globally; checks every theta normalization; makes both the
+ten-coordinate Jacobi field and the linked fourteen-complex-coordinate
+field effective; provides an arbitrary-family complex realifier;
+instantiates the linked block as a fifty-dimensional static compact
+compiler; constructs the dynamically controlled thirty-six-coordinate
+source; retains the valid fifty-eight-dimensional all-affine compiler as a
+provisional fallback; and constructs the preferred mixed compiler with
+four inherited circles, one affine linked block, clearing exponent \(8\),
+five base spheres, and global equator tangency.  This keeps the essential
+distinction between affine linked degree \(8\) and ordinary total degree
+\(9\).  It also makes the radians-to-turns factor \(1/(2\pi)\) explicit,
+proves a global coupled controller--phase flow and its ODE, and proves that
+every ergodic invariant probability is concentrated on one locked
+controller fibre where phase projection is almost everywhere a constant
+radical rotation with Haar marginal.  It compiles the factor-four
+right-hand-side oscillator, classifies its
+ergodic additive-torus measures as Haar on unique graphs, and discharges
+the detector's Haar hypothesis whenever the required physical phase factor
+is supplied.  Finally, it transports the still-open horocycle
+classification, conditionally, through state factors and globally trivial
+finite sheets.  It thereby reduces the remaining lower-bound work to named,
+mathematically meaningful interfaces.
+
+The present definitive status is therefore:
+\begin{quote}
+\emph{The c.e. upper bound and all major algebraic, analytic, compiler,
+wrapper, ergodic-maximizer, component-graph, cubicization, and propagation
+components listed above are kernel checked.  The finite ten-coordinate
+Jacobi compiler, linked unary--Jacobi compiler, dynamic two-controller
+coupling, both fifty-eight-dimensional compact pipelines, the
+geometry-faithful mixed-layout tangency theorem, physical phase
+normalization, the locked-fibre controller--phase Haar classification,
+oscillator compiler and graph classification, and physical-clock
+detector-average implication are complete in their stated scopes.
+Conditional on an explicit Dani--Smillie hypothesis and an explicit
+modular factor map, the ergodic marginal and recurrence classification is
+also complete.
+
+The full \(\Sigma^0_1\)-hardness theorem for homogeneous polynomial GAS is
+not yet a theorem of the Lean development.  It still requires: a proof of
+the stated Dani--Smillie proposition in the exact quotient; the recurrent
+modular/Jacobi state map and selector, including any nontrivial finite-cover
+transport; an exact factor from the geometry-faithful compact polynomial
+source to the already classified coupled clock flow; exact identification
+of the physical polynomial oscillator and detector with their additive
+factor models; and construction of the canonical fixed source family,
+including tangency for any further enlarged final layout, the
+source-specific positive component certificate, and the ergodic
+nonzero-drift alternative.  None of those remaining integration
+statements, and hence no full lower bound, is claimed here.}
+\end{quote}
+
+\begin{thebibliography}{99}
+\small
+
+\bibitem{Ahlfors1966}
+L.~V. Ahlfors,
+\newblock \emph{Complex Analysis: An Introduction to the Theory of Analytic
+Functions of One Complex Variable}, 2nd ed.,
+\newblock McGraw--Hill, New York, 1966, pp.~271--274.
+
+\bibitem{Ahmadi2012}
+A.~A. Ahmadi,
+\newblock On the difficulty of deciding asymptotic stability of cubic
+homogeneous vector fields,
+\newblock in \emph{2012 American Control Conference}, 2012,
+pp.~3334--3339,
+\newblock \href{https://doi.org/10.1109/ACC.2012.6315687}
+{doi:10.1109/ACC.2012.6315687}.
+
+\bibitem{AhmadiElKhadir2020}
+A.~A. Ahmadi and B. El Khadir,
+\newblock On algebraic proofs of stability for homogeneous vector fields,
+\newblock \emph{IEEE Transactions on Automatic Control} 65 (2020), no.~1,
+325--332,
+\newblock \href{https://doi.org/10.1109/TAC.2019.2914968}
+{doi:10.1109/TAC.2019.2914968}.
+
+\bibitem{Brezhnev2013}
+Y.~V. Brezhnev,
+\newblock Non-canonical extension of theta-functions and modular
+integrability of theta-constants,
+\newblock \emph{Proceedings of the Royal Society of Edinburgh Section A:
+Mathematics} 143 (2013), no.~4, 689--738,
+\newblock \href{https://doi.org/10.1017/S0308210512001023}
+{doi:10.1017/S0308210512001023}.
+
+\bibitem{BrezhnevLyakhovichSharapov2011}
+Y.~V. Brezhnev, S.~L. Lyakhovich, and A.~A. Sharapov,
+\newblock Dynamical systems defining Jacobi's theta-constants,
+\newblock \emph{Journal of Mathematical Physics} 52 (2011), no.~11,
+112704,
+\newblock \href{https://doi.org/10.1063/1.3662961}
+{doi:10.1063/1.3662961}.
+
+\bibitem{Chandrasekharan1985}
+K. Chandrasekharan,
+\newblock \emph{Elliptic Functions},
+\newblock Grundlehren der mathematischen Wissenschaften 281,
+Springer, Berlin, 1985,
+\newblock \href{https://doi.org/10.1007/978-3-642-52244-4}
+{doi:10.1007/978-3-642-52244-4}.
+
+\bibitem{DLMF}
+F.~W.~J. Olver, A.~B. Olde Daalhuis, D.~W. Lozier, B.~I. Schneider,
+R.~F. Boisvert, C.~W. Clark, B.~R. Miller, B.~V. Saunders, H.~S. Cohl,
+and M.~A. McClain (eds.),
+\newblock \emph{NIST Digital Library of Mathematical Functions},
+\newblock \url{https://dlmf.nist.gov/}; Sections 20.2, 20.7, and 23.18.
+
+\bibitem{DaniSmillie1984}
+S.~G. Dani and J. Smillie,
+\newblock Uniform distribution of horocycle orbits for Fuchsian groups,
+\newblock \emph{Duke Mathematical Journal} 51 (1984), no.~1, 185--194,
+\newblock \href{https://doi.org/10.1215/S0012-7094-84-05110-X}
+{doi:10.1215/S0012-7094-84-05110-X}.
+
+\bibitem{DavisPutnamRobinson1961}
+M. Davis, H. Putnam, and J. Robinson,
+\newblock The decision problem for exponential Diophantine equations,
+\newblock \emph{Annals of Mathematics}, Second Series, 74 (1961), no.~3,
+425--436,
+\newblock \href{https://doi.org/10.2307/1970289}
+{doi:10.2307/1970289}.
+
+\bibitem{Hartshorne1977}
+R. Hartshorne,
+\newblock \emph{Algebraic Geometry},
+\newblock Graduate Texts in Mathematics 52, Springer, New York, 1977,
+\newblock \href{https://doi.org/10.1007/978-1-4757-3849-0}
+{doi:10.1007/978-1-4757-3849-0}.
+
+\bibitem{HubbardMiller2010}
+J.~H. Hubbard and R.~L. Miller,
+\newblock Equidistribution of horocyclic flows on complete hyperbolic
+surfaces of finite area,
+\newblock in \emph{In the Tradition of Ahlfors--Bers, V},
+Contemporary Mathematics 510, American Mathematical Society, Providence,
+2010, pp.~129--150,
+\newblock \href{https://doi.org/10.1090/conm/510/10022}
+{doi:10.1090/conm/510/10022}.
+
+\bibitem{Lagrange1770}
+J.-L. Lagrange,
+\newblock Demonstration d'un theoreme d'arithmetique,
+\newblock \emph{Nouveaux Memoires de l'Academie Royale des Sciences et
+Belles-Lettres de Berlin}, volume for 1770 (printed 1772), 123--133;
+reprinted in \emph{Oeuvres de Lagrange}, vol.~3, 1869, pp.~189--201.
+
+\bibitem{Matiyasevich1970}
+Y.~V. Matiyasevich,
+\newblock Enumerable sets are Diophantine,
+\newblock \emph{Soviet Mathematics Doklady} 11 (1970), no.~2, 354--357.
+
+\bibitem{Matiyasevich1971}
+Y.~V. Matiyasevich,
+\newblock Diophantine representation of enumerable predicates,
+\newblock \emph{Mathematics of the USSR-Izvestiya} 5 (1971), no.~1,
+1--28,
+\newblock \href{https://doi.org/10.1070/IM1971v005n01ABEH001004}
+{doi:10.1070/IM1971v005n01ABEH001004}.
+
+\bibitem{Matiyasevich1993}
+Y.~V. Matiyasevich,
+\newblock \emph{Hilbert's Tenth Problem},
+\newblock Foundations of Computing, MIT Press, Cambridge, MA, 1993.
+
+\bibitem{Mumford1983}
+D. Mumford,
+\newblock \emph{Tata Lectures on Theta I},
+\newblock Progress in Mathematics 28, Birkhauser, Boston, 1983,
+\newblock \href{https://doi.org/10.1007/978-1-4899-2843-6}
+{doi:10.1007/978-1-4899-2843-6}.
+
+\bibitem{Rosier1992}
+L. Rosier,
+\newblock Homogeneous Lyapunov function for homogeneous continuous vector
+field,
+\newblock \emph{Systems \& Control Letters} 19 (1992), no.~6, 467--473,
+\newblock \href{https://doi.org/10.1016/0167-6911(92)90078-7}
+{doi:10.1016/0167-6911(92)90078-7}.
+
+\bibitem{Sturmfels1996}
+B. Sturmfels,
+\newblock \emph{Grobner Bases and Convex Polytopes},
+\newblock University Lecture Series 8, American Mathematical Society,
+Providence, RI, 1996,
+\newblock \href{https://doi.org/10.1090/ulect/008}
+{doi:10.1090/ulect/008}.
+
+\bibitem{Walters1982}
+P. Walters,
+\newblock \emph{An Introduction to Ergodic Theory},
+\newblock Graduate Texts in Mathematics 79, Springer, New York, 1982,
+\newblock \href{https://doi.org/10.1007/978-1-4612-5775-2}
+{doi:10.1007/978-1-4612-5775-2}.
+
+\end{thebibliography}
+
+\end{document}

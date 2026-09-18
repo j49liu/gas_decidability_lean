@@ -1,0 +1,30 @@
+import HGAS.Arithmetic.FixedDetectorNormalizedForwardClassifiedSeries
+
+set_option linter.hashCommand false
+set_option linter.style.longLine false
+
+/-!
+# Axiom audit for normalized forward Bloch continuation
+
+These commands expose the transitive theorem dependencies of the
+one-sided continuation, physical-column identification, and corrected
+moment endpoints.
+-/
+
+#print axioms HGAS.Modular.AffineBlochParameters.regular_and_eqOn_Ici_jacobiBlochPath_of_core_eq_zero
+
+#print axioms HGAS.FixedDetectorNormalizedForwardBlochColumn.controllers_eqOn_Ici
+
+#print axioms HGAS.FixedDetectorNormalizedForwardBlochColumn.actualJacobi_isForwardTrajectory
+
+#print axioms HGAS.FixedDetectorNormalizedForwardBlochColumn.jacobi_regular_and_eqOn_Ici
+
+#print axioms HGAS.FixedDetectorNormalizedForwardBlochColumn.gauge_eqOn_Ici
+
+#print axioms HGAS.FixedDetectorNormalizedForwardBlochColumn.matchesCompiledGaugedBlochPhaseAt
+
+#print axioms HGAS.FixedDetectorNormalizedForwardClassifiedSeries.a0_im_eq_zero
+
+#print axioms HGAS.FixedDetectorNormalizedForwardClassifiedSeries.plus_eq_quadraticMomentSeries_zeroLinear
+
+#print axioms HGAS.FixedDetectorNormalizedForwardClassifiedSeries.minus_eq_quadraticMomentSeries_zeroLinear

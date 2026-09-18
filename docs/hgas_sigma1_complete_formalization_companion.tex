@@ -1,0 +1,2229 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1.02in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{xurl}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=green!35!black,
+  urlcolor=blue!55!black
+}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\emergencystretch}{3em}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{warning}[theorem]{Warning}
+
+\newcommand{\R}{\mathbb R}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\N}{\mathbb N}
+\newcommand{\T}{\mathbb T}
+\newcommand{\HGAS}{\mathrm{HGAS}}
+\newcommand{\dd}{\,\mathrm d}
+\newcommand{\Lean}{\textsc{Lean}}
+\newcommand{\Mathlib}{\textsc{Mathlib}}
+\newcommand{\RE}{\mathrm{RE}}
+\newcommand{\GAS}{\mathrm{GAS}}
+\newcommand{\leanname}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\leanmodule}[1]{\path{#1}}
+
+\title{\textbf{Fixed-Resource Undecidability of Homogeneous Polynomial
+Global Asymptotic Stability}\\
+\large A detailed mathematical proof and guide to the complete Lean
+formalization}
+\author{Formalization project companion}
+\date{24 July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+For fixed natural numbers \(n,d\), let
+\(\HGAS_{\Q}(n,d)\) be the set of finite sparse rational codes for
+homogeneous polynomial vector fields \(F:\R^n\to\R^n\) of degree \(d\)
+whose origin is globally asymptotically stable.  Invalid homogeneity codes
+are declared negative instances.
+
+This document proves that there are fixed constants \(n_\ast\geq1\) and
+odd \(d_\ast\geq3\) for which
+\(\HGAS_{\Q}(n_\ast,d_\ast)\) is
+\(\Sigma^0_1\)-complete under computable many-one reductions.  In
+particular, the fixed-pair decision problem is undecidable and its
+complement is not computably enumerable.  More strongly, there is a fixed
+threshold \(N_\ast\) such that
+\[
+  \HGAS_{\Q}(N,d)
+  \quad\hbox{is \(\Sigma^0_1\)-complete whenever}\quad
+  N\geq N_\ast,\quad d\geq3,\quad d\ \hbox{odd}.
+\]
+Thus cubic homogeneous GAS is already \(\Sigma^0_1\)-complete in every
+fixed dimension \(N\geq N_\ast\).
+
+The lower bound compiles universal halting into a fixed diagonal--quadratic--
+linear integer system, a prime-radical torus detector, a polynomial
+modular/Jacobi source, a compact stereographic accumulator, and finally a
+rational homogeneous polynomial field.  The upper bound enumerates exact
+rational Lyapunov certificates.  A solvability-preserving augmentation
+\(x_j-y_j=0\) is essential: it forces every detector column to have a
+nonzero linear character and thereby removes a genuine zero-ratio
+resonance in an earlier three-moment argument.
+
+Every theorem used in the final dependency chain is formalized in the
+accompanying \Lean{} project.
+The final theorems contain no \leanname{sorry}, \leanname{admit}, project
+\leanname{axiom}, or \leanname{unsafe} declaration.  Kernel inspection of
+the headline results reports only \leanname{propext},
+\leanname{Classical.choice}, and \leanname{Quot.sound}.  The fixed constants
+are named finite objects selected once and for all; because the particular
+MRDP representative is obtained by classical choice, the development does
+not claim that \(n_\ast,d_\ast,N_\ast\) have been evaluated to decimal
+numerals.
+\end{abstract}
+
+\tableofcontents
+
+\section{The theorem, exactly stated}
+\label{sec:headline}
+
+\subsection{Finite syntax and semantics}
+
+A \emph{polynomial field code} in dimension \(n\) is an \(n\)-tuple of
+finite lists of pairs
+\[
+    (\alpha,c),\qquad
+    \alpha\in\N^n,\quad c\in\Q.
+\]
+Its realization is the rational polynomial vector field
+\[
+ F_i(x)=\sum_{(\alpha,c)\text{ in coordinate }i}c\,x^\alpha.
+\]
+Duplicate monomials and zero coefficients are allowed in the raw syntax;
+decoding performs the usual finite polynomial sum.  There is a primitive
+recursive Boolean test saying that every decoded coordinate is homogeneous
+of degree \(d\).
+
+The formal predicate is
+\[
+\begin{split}
+ \HGAS_{\Q}(n,d)(F)
+ \quad\Longleftrightarrow\quad&
+ F\text{ passes the degree-\(d\) homogeneity test},\\
+ &0\text{ is globally asymptotically stable for }\dot x=F(x).
+\end{split}
+\tag{1.1}
+\]
+This is \leanname{HGASQ} in
+\leanmodule{HGAS/Computability/HGASLanguage.lean}.  Global asymptotic
+stability is not defined through a possibly nonexistent global flow.  It
+contains four separate assertions:
+
+\begin{enumerate}
+\item the origin is an equilibrium;
+\item every initial point admits a forward solution on \([0,\infty)\);
+\item the origin is Lyapunov stable; and
+\item every forward solution converges to the origin.
+\end{enumerate}
+
+These definitions occur in
+\leanmodule{HGAS/Dynamics/Stability.lean}.  This explicit forward-completeness
+clause matters because polynomial ODEs may otherwise blow up in finite
+time.
+
+\begin{definition}
+A predicate \(P\) on a primitively codable type is
+\(\Sigma^0_1\)-complete if \(P\) is computably enumerable and every
+computably enumerable predicate on \(\N\) computably many-one reduces to
+\(P\).
+\end{definition}
+
+The project uses \Mathlib{}'s partial-recursive codes and proves this
+definition equivalent to reduction from its universal halting predicate;
+see \leanmodule{HGAS/Computability/SigmaOne.lean}.
+
+\subsection{The fixed constants}
+
+The constants used in the formal statement are deliberately defined from
+the actual compiler, rather than hidden behind an existential quantifier.
+Let \(E_0,V_0\) be the fixed row and variable counts of the selected
+universal DQL representation.  The repair in Section~\ref{sec:augmentation}
+uses
+\[
+       E_1=E_0+V_0,\qquad V_1=2V_0.
+\tag{1.2}
+\]
+Let \(n_{\rm src}\) be the resulting compact-source dimension and let
+\(D_{\rm wrap}\) be its fixed odd wrapper degree.  The homogeneous
+product-sphere wrapper uses two source sphere blocks and adds one projective
+coordinate, so define
+\[
+ n_\ast=n_{\rm src}+1,\qquad
+ d_\ast=D_{\rm wrap}+2(2+1)=D_{\rm wrap}+6.
+\tag{1.3}
+\]
+The literal \Lean{} definitions are
+\leanname{fixedDimension} and \leanname{fixedDegree} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean}.
+The same file proves \(n_\ast>0\), \(d_\ast\) odd, and \(d_\ast\geq3\)
+as \leanname{fixedDimension_pos}, \leanname{fixedDegree_odd}, and
+\leanname{fixedDegree_ge_three}.
+
+Put
+\[
+ k_\ast=\frac{d_\ast-1}{2},
+ \qquad
+ N_\ast=\#\{\alpha\in\N^{n_\ast}:|\alpha|=k_\ast\}.
+\tag{1.4}
+\]
+The last cardinality is the dimension of the degree-\(k_\ast\) Veronese
+space.  In \Lean{} it is
+\[
+ \leanname{Veronese.cubicLiftCodeDimension}
+   \bigl(\leanname{fixedDimension},
+         \leanname{fixedOutputHalfDegree}\bigr).
+\]
+
+\begin{theorem}[Fixed-pair and cofinal completeness]
+\label{thm:main}
+With the fixed constants above:
+
+\begin{enumerate}
+\item \(\HGAS_{\Q}(n_\ast,d_\ast)\) is
+  \(\Sigma^0_1\)-complete;
+\item for every \(N\geq N_\ast\) and every odd \(d\geq3\),
+  \(\HGAS_{\Q}(N,d)\) is \(\Sigma^0_1\)-complete; and
+\item in particular, for every \(N\geq N_\ast\),
+  \(\HGAS_{\Q}(N,3)\) is \(\Sigma^0_1\)-complete.
+\end{enumerate}
+\end{theorem}
+
+The three kernel-checked declarations are, respectively,
+\[
+\begin{gathered}
+\leanname{fixedPair_sigmaOneComplete},\\
+\leanname{cofinal_sigmaOneComplete},\\
+\leanname{cubic_sigmaOneComplete}
+\end{gathered}
+\]
+in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean}.
+The same file records the undecidability consequences as
+\leanname{fixedPair_not_computable} and
+\leanname{cubic_not_computable}, and the non-c.e.-complement consequences
+as \leanname{fixedPair_complement_not_re} and
+\leanname{cubic_complement_not_re}.
+
+\begin{remark}[What is not claimed]
+The theorem proves cubic undecidability in every sufficiently large fixed
+dimension.  It does \emph{not} decide the separate low-dimensional problem
+\(\HGAS_{\Q}(3,3)\).  Nothing in the Veronese or padding argument lowers
+the fixed dimension to three.
+\end{remark}
+
+\begin{remark}[Fixed does not mean numerically printed]
+The universal Diophantine representation is a finite object chosen from a
+proved existence theorem.  Once chosen, its dimensions and coefficient
+tables are constants, and all input-specialization maps are proved
+computable.  But the choice is noncomputable in the programming-language
+sense, so the formal development does not advertise a command
+\texttt{\#eval} that prints \(n_\ast\).  The theorem is an ordinary fixed-pair
+existence and many-one completeness theorem, not a numerical
+resource-minimization result.
+\end{remark}
+
+\subsection{Proof map}
+
+The proof has two branches:
+\[
+\begin{array}{c}
+\text{homogeneous GAS}
+ \Longrightarrow
+\text{finite exact rational Lyapunov certificate}
+ \Longrightarrow
+\HGAS_{\Q}(n,d)\in\Sigma^0_1,
+\\[5pt]
+\text{universal halting}
+\Longrightarrow
+\text{fixed augmented DQL}
+\Longrightarrow
+\text{compact source with a strict invariant-average sign}
+\\
+\Longrightarrow
+\text{fixed homogeneous rational field}
+\Longrightarrow
+\text{cubicization and cofinal padding}.
+\end{array}
+\tag{1.5}
+\]
+The remainder of the document proves each arrow and identifies its
+\Lean{} counterpart.
+
+\section{The computably enumerable upper bound}
+\label{sec:upper}
+
+\begin{theorem}[Uniform c.e. upper bound at fixed odd degree]
+\label{thm:upper}
+For every fixed \(n\) and odd \(d\), the predicate
+\(\HGAS_{\Q}(n,d)\) is computably enumerable.
+\end{theorem}
+
+This is \leanname{hgasQ_re_of_oddDegree} in
+\leanmodule{HGAS/Lyapunov/RationalHomogeneousConverse.lean}.  We give the
+full mathematical argument because the lower bound alone would establish
+hardness, not \(\Sigma^0_1\)-completeness.  Its formal scope is one fixed
+dimension and one fixed odd degree.  The manuscript's coded
+variable-resource and even-degree upper bound instead uses a paper-level
+real quantifier-elimination argument and is not a separate final Lean
+declaration.
+
+\subsection{The exact certificate}
+
+Write
+\[
+       \rho(x)=x_1^2+\cdots+x_n^2.
+\]
+A certificate contains a rational polynomial \(p\), a natural exponent
+\(r\), and two natural grid resolutions \(m_p,m_q\).  The checker generates
+the finite rational grids, coefficient--derivative bounds, and rational
+margins from these data.  The certificate represents the degree-two
+homogeneous rational function
+\[
+             V(x)=\frac{p(x)}{\rho(x)^r}.
+\tag{2.1}
+\]
+If \(F\) has degree \(d\), differentiation gives
+\[
+\dot V(x)
+ =\frac{\rho(x)\nabla p(x)\!\cdot\!F(x)
+       -2r\,p(x)\,x\!\cdot\!F(x)}
+        {\rho(x)^{r+1}}.
+\]
+Thus the polynomial numerator used to certify strict decrease is
+\[
+ q(F,p,r)
+   =-\rho\,\nabla p\!\cdot\!F+2r\,p\,x\!\cdot\!F.
+\tag{2.2}
+\]
+The semantic polynomial is
+\leanname{HGAS.rationalLyapunovNumerator} in
+\leanmodule{HGAS/Lyapunov/RationalCertificateAlgebra.lean}.  Its executable
+sparse implementation is
+\leanname{PolynomialCode.rationalLyapunovNumerator} in
+\leanmodule{HGAS/Foundation/PolynomialDifferentiationCode.lean}; a decoding
+theorem identifies the two exactly.
+
+Although \(\rho\) in (2.1) is the squared Euclidean norm, homogeneity makes
+strict positivity of \(p\) and \(q\) away from zero equivalent to strict
+positivity on the unit sphere of any norm.  The Boolean checker uses the
+sup-norm unit sphere, whose boundary admits a particularly simple finite
+rational grid.  Exact derivative bounds transfer the checked grid margin
+to every point of that sphere.  The finite checker and its semantic
+interpretation are developed in
+\leanmodule{HGAS/Lyapunov/ExactGridPositivity.lean} and
+\leanmodule{HGAS/Lyapunov/GridRationalCertificateSoundness.lean};
+primitive recursiveness is proved in
+\leanmodule{HGAS/Lyapunov/ExactGridPositivityComputability.lean} and
+\leanmodule{HGAS/Lyapunov/GridRationalCertificate.lean}.
+
+If it accepts, (2.1) is positive definite away from zero and (2.2) is
+positive away from zero.  Coercivity of \(V\) bounds forward trajectories
+inside compact sublevel sets.  Standard local ODE continuation then proves
+forward completeness; the strict derivative inequality gives Lyapunov
+stability and global attraction.  Hence accepted certificates are sound
+for the exact GAS definition, including completeness.  This is proved in
+\leanmodule{HGAS/Lyapunov/GridRationalCertificateSoundness.lean}.
+
+\subsection{Completeness of the certificate search}
+
+Suppose now that \(F\) is homogeneous of odd degree \(d\) and is GAS.
+The completeness proof has five steps.
+
+\paragraph{1. A homogeneous \(C^1\) Lyapunov function.}
+Separate radius and direction.  On the unit sphere put
+\[
+       a(u)=\langle u,F(u)\rangle,\qquad
+       Y(u)=F(u)-a(u)u.
+\tag{2.3}
+\]
+Then \(Y\) is tangent to the sphere.  For \(x=ru\), homogeneity gives,
+after the usual angular time change,
+\[
+       \frac{\dd u}{\dd s}=Y(u),\qquad
+       \frac{\dd}{\dd s}\log r=a(u).
+\tag{2.4}
+\]
+GAS yields a uniform negative radial-cocycle block on the compact sphere.
+Integrating a suitably smoothed finite-horizon cocycle produces a strict
+degree-two homogeneous \(C^1\) Lyapunov function.  The construction is
+formalized in
+\leanmodule{HGAS/Lyapunov/HomogeneousConverseC1.lean} and
+\leanmodule{HGAS/Lyapunov/EuclideanAngularConverse.lean}.  It is closely
+related to Rosier's homogeneous converse theorem~\cite{Rosier1992}, but the
+particular theorem needed here is proved internally.
+
+\paragraph{2. Evenization.}
+Odd degree implies \(F(-x)=-F(x)\).  If \(V\) is a strict Lyapunov
+function, then
+\[
+                 V_{\rm ev}(x)=\frac{V(x)+V(-x)}2
+\tag{2.5}
+\]
+is even, positive, degree two, and has strictly negative orbital
+derivative.  The proof, including the derivative identity, is reusable in
+\leanmodule{HGAS/Analysis/EvenC1Lyapunov.lean}.
+
+\paragraph{3. Simultaneous \(C^1\) polynomial approximation.}
+On a cube containing the unit sphere, tensor Bernstein polynomials
+approximate \(V_{\rm ev}\) and all first partial derivatives uniformly.
+The development proves the tensor derivative formula rather than assuming
+a black-box approximation theorem; see
+\leanmodule{HGAS/Analysis/TensorBernsteinPolynomial.lean},
+\leanmodule{HGAS/Analysis/TensorBernsteinDerivative.lean}, and
+\leanmodule{HGAS/Analysis/TensorBernsteinC1Approximation.lean}.
+For sufficiently small \(C^1\) error, positivity and strict decay retain
+positive margins on the sphere.
+
+\paragraph{4. Homogenization and rational perturbation.}
+Evenness permits reconstruction of an even homogeneous numerator after
+multiplication by a sufficiently high power of \(\rho\).  Rational
+coefficients are dense in the finite coefficient space, so a sufficiently
+small rational perturbation preserves both compact strict margins.  This
+produces a rational function of the form (2.1).
+
+\paragraph{5. A finite exact grid witness.}
+Strict positivity on a compact sphere supplies positive margins and finite
+derivative bounds.  A sufficiently fine rational grid therefore passes the
+exact checker.  This is the completeness theorem in
+\leanmodule{HGAS/Lyapunov/GridRationalCertificateCompleteness.lean}.
+
+Consequently every positive instance has some finite accepted certificate.
+Enumerating all finite candidate codes semidecides GAS.  This rational
+certificate viewpoint is consistent with the algebraic Lyapunov results of
+Ahmadi and El Khadir~\cite{AhmadiElKhadir2020}; here, however, the exact
+certificate language, soundness, approximation, and enumerability chain
+are all present in the kernel-checked development.
+
+\section{The universal arithmetic source}
+\label{sec:arithmetic}
+
+\subsection{Universal halting}
+
+\Mathlib{} represents partial-recursive functions by a countable type of
+codes.  Define
+\[
+  \mathrm{UniversalHalts}(e,x)
+  \quad\Longleftrightarrow\quad
+  \operatorname{eval}(e,x)\text{ is defined}.
+\tag{3.1}
+\]
+Its domain is c.e.  Conversely, if \(A\subseteq\N\) is c.e., choose a code
+\(e_A\) for the partial computation which returns \(0\) precisely on
+members of \(A\).  Then
+\[
+             x\in A
+       \quad\Longleftrightarrow\quad
+             \mathrm{UniversalHalts}(e_A,x).
+\tag{3.2}
+\]
+The map \(x\mapsto(e_A,x)\) is computable.  This proves universal-halting
+\(\Sigma^0_1\)-completeness in
+\leanmodule{HGAS/Computability/SigmaOne.lean}.
+
+For the arithmetic compiler it is convenient to encode the code--input
+pair by one natural number.  The predicate
+\(\leanname{UniversalHalting.Predicate}:\N\to\mathrm{Prop}\) is the
+resulting unary complete predicate.  Its exact encoding and bounded
+interpreter are in
+\leanmodule{HGAS/Arithmetic/ExecutableMRDPBoundary.lean}.
+
+\subsection{The formal MRDP fragment}
+
+The reduction needs a fixed polynomial \(P(t,z_1,\ldots,z_s)\in
+\Z[t,z_1,\ldots,z_s]\) such that
+\[
+ \mathrm{Predicate}(t)
+ \quad\Longleftrightarrow\quad
+ \exists z\in\N^s,\ P(t,z)=0.
+\tag{3.3}
+\]
+The project does not introduce (3.3) as an axiom.  It proves the precise
+primitive-recursive Diophantine closure statement needed for the bounded
+universal-machine trace.
+
+Here is the mathematical core.  Diophantine graphs are plainly closed
+under the initial functions and composition.  Primitive recursion asks
+one to express a finite trace
+\[
+ a_0=g(\bar x),\qquad
+ a_{i+1}=h(\bar x,i,a_i)\quad(0\leq i<N),\qquad
+ a_N=y
+\tag{3.4}
+\]
+with a fixed number of existentially quantified natural variables.  A
+sufficiently large radix \(\beta\) packs the sequence into one integer
+\[
+                     A=\sum_{i=0}^{N}a_i\beta^i.
+\tag{3.5}
+\]
+Sparse radix ciphers provide Diophantine access to the digits and to
+finite aligned register operations.  The conditions in (3.4), apparently
+a bounded universal quantification over \(i<N\), are combined into a
+single sparse bounded-forall certificate.  The radix is itself certified
+large enough that carries cannot corrupt any register.  Correctness has
+two directions:
+
+\begin{itemize}
+\item a genuine finite computation produces the packed certificate; and
+\item every accepted packed certificate decodes, digit by digit, to a
+  genuine computation satisfying (3.4).
+\end{itemize}
+
+The principal modules are
+\leanmodule{HGAS/Arithmetic/SparseRadixCipher.lean},
+\leanmodule{HGAS/Arithmetic/SparseCipherCircuit.lean},
+\leanmodule{HGAS/Arithmetic/SparseBoundedForall.lean}, and
+\leanmodule{HGAS/Arithmetic/PrimitiveRecursiveDiophantine.lean}.
+Their endpoints include
+\leanname{cipherCertificate_iff_boundedForall},
+\leanname{boundedForall_dioph},
+\leanname{recursionCertificate_iff},
+\leanname{natPrimrec_unaryGraph_dioph}, and
+\leanname{binaryPrimrecRel_dioph}.
+
+Applying the last theorem to the primitive-recursive bounded interpreter
+proves
+\[
+ \leanname{binaryPrimitiveRecursiveRelationsAreDiophantine}
+\]
+in \leanmodule{HGAS/Arithmetic/UnconditionalMRDP.lean}.  Finite-support
+extraction then supplies (3.3).  This is the portion of the classical
+Davis--Putnam--Robinson--Matiyasevich theorem
+\cite{DavisPutnamRobinson1961,Matiyasevich1970,Matiyasevich1971,
+Matiyasevich1993} needed by the reduction, formalized rather than
+postulated.
+
+\subsection{Fixed diagonal--quadratic--linear systems}
+
+A diagonal--quadratic--linear, or DQL, system with \(E\) rows and \(V\)
+integer variables is
+\[
+  \sum_{j=1}^{V}\bigl(A_{ij}x_j^2+B_{ij}x_j\bigr)=c_i,
+       \qquad i=1,\ldots,E,
+\tag{3.6}
+\]
+with all coefficients integral.  Mixed quadratic terms are forbidden.
+This restriction loses no effectiveness.  A multiplication gate \(xy=z\)
+can be replaced by a fresh variable \(w\) and
+\[
+                  w=x+y,\qquad
+                  w^2-x^2-y^2-2z=0.
+\tag{3.7}
+\]
+Natural-number witnesses are represented over \(\Z\) with four squares,
+using Lagrange's theorem~\cite{Lagrange1770}.  Addition, constants, copies,
+and (3.7) compile a finite polynomial circuit into finitely many DQL rows.
+The equivalence of witnesses is proved in
+\leanmodule{HGAS/Arithmetic/DQL.lean},
+\leanmodule{HGAS/Arithmetic/GateDQLCompiler.lean}, and
+\leanmodule{HGAS/Arithmetic/FixedRepresentationDQL.lean}.
+
+After the polynomial in (3.3) has been fixed, substituting the input
+\(t\) changes only right-hand-side data in a fixed template.  Thus there
+are fixed \(E_0,V_0\) and a computable map
+\[
+       t\longmapsto I_t\in\mathrm{DQL}(E_0,V_0)
+\tag{3.8}
+\]
+such that
+\[
+             I_t\text{ is solvable over }\Z
+       \quad\Longleftrightarrow\quad
+             \mathrm{Predicate}(t).
+\tag{3.9}
+\]
+These are
+\leanname{unconditionalUniversalHaltingFixedDQL},
+\leanname{unconditionalUniversalHaltingFixedDQL_computable}, and
+\leanname{unconditionalUniversalHaltingFixedDQL_solvable_iff} in
+\leanmodule{HGAS/Arithmetic/UnconditionalFixedDQL.lean}.
+
+\subsection{The nonzero-linear-column augmentation}
+\label{sec:augmentation}
+
+The final three-moment selector needs the linear character of every
+arithmetic variable to be nonzero.  A general DQL representation need not
+have this property: a variable may occur only through \(x_j^2\).  We enforce
+it without changing solvability.
+
+For every old variable \(x_j\), add a duplicate \(y_j\) and the row
+\[
+                        x_j-y_j=0.
+\tag{3.10}
+\]
+Old rows use only the \(x\)-variables.  If \(x\) solves the old system,
+\((x,x)\) solves the augmented one.  Conversely, the first half of every
+augmented solution solves all old rows.  Therefore
+\[
+                 \operatorname{Aug}(I)\text{ solvable}
+            \quad\Longleftrightarrow\quad
+                 I\text{ solvable}.
+\tag{3.11}
+\]
+Every old column contains coefficient \(+1\) in its new equality row, and
+every duplicate column contains coefficient \(-1\).  Hence every augmented
+linear column is nonzero.
+
+The construction and both implications in (3.11) are in
+\leanmodule{HGAS/Arithmetic/DQLNonzeroLinearAugmentation.lean}.  The same
+file proves that augmentation is primitive recursive.  Applied to (3.8),
+it gives fixed dimensions (1.2), a computable family
+\(\widetilde I_t\), and
+\[
+\begin{split}
+\widetilde I_t\text{ solvable}
+ &\Longleftrightarrow \mathrm{Predicate}(t),\\
+\forall j\ \exists i\quad
+   \widetilde B_{ij}&\neq0.
+\end{split}
+\tag{3.12}
+\]
+The fixed-resource specialization is in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedUniversalResources.lean}.
+
+\section{Homogeneous GAS as a compact invariant-average sign}
+\label{sec:angular-sign}
+
+The compiler first constructs a compact polynomial source and a continuous
+reward.  This section explains why the sign of the largest invariant
+average is exactly the right interface to homogeneous GAS.
+
+\subsection{Polar dynamics}
+
+Suppose \(F\) is homogeneous of degree \(m+1\), where \(m>0\).  For a unit
+vector \(u\), define \(a,Y\) by (2.3).  If a nonzero trajectory is written
+\(x(t)=r(t)u(t)\), then
+\[
+       \dot r=r^{m+1}a(u),\qquad
+       \dot u=r^mY(u).
+\tag{4.1}
+\]
+With angular time \(\dd s/\dd t=r^m\),
+\[
+       u'=Y(u),\qquad
+       (\log r)'=a(u).
+\tag{4.2}
+\]
+Consequently,
+\[
+       \log\frac{r(s)}{r(0)}
+          =\int_0^s a(\phi_\tau u(0))\,\dd\tau,
+\tag{4.3}
+\]
+where \(\phi\) is the angular flow on the compact sphere.
+
+\subsection{Uniform negative blocks}
+
+For a compact flow \(\phi\) and continuous reward \(a\), write
+\[
+       \mathcal M_\phi(a)
+       =\max_{\mu\in\mathcal I(\phi)}\int a\,\dd\mu,
+\tag{4.4}
+\]
+where \(\mathcal I(\phi)\) is the set of invariant Borel probabilities.
+The maximum exists.  The following equivalence is the key compactness
+principle:
+\[
+\mathcal M_\phi(a)<0
+\quad\Longleftrightarrow\quad
+\exists T,c>0\ \forall x,\quad
+   \int_0^T a(\phi_t x)\,\dd t\leq-c.
+\tag{4.5}
+\]
+
+For the forward implication, if no uniform block exists, choose longer
+orbit segments with average arbitrarily close to zero.  Their occupation
+probabilities have a weakly convergent subnet.  The endpoint error in
+invariance is \(O(1/T)\), so the limit is invariant and has nonnegative
+reward average, contradicting (4.4).  For the reverse implication,
+integrate the uniform block against any invariant probability.
+
+The occupation-measure argument, existence and compactness of invariant
+probabilities, and the equivalence (4.5) are formalized in
+\leanmodule{HGAS/Dynamics/KrylovBogolyubov.lean},
+\leanmodule{HGAS/Dynamics/InvariantProbabilityCompact.lean}, and
+\leanmodule{HGAS/Dynamics/UniformNegativeBlocks.lean}.
+
+Combining (4.2)--(4.5), including the conversion back to physical time,
+gives
+\[
+       0\text{ is GAS for }F
+       \quad\Longleftrightarrow\quad
+       \mathcal M_\phi(a)<0.
+\tag{4.6}
+\]
+The reusable formal endpoint is
+\leanname{globallyAsymptoticallyStable_iff_maximalAngularAverage_neg} in
+\leanmodule{HGAS/Wrapper/AngularAverageGAS.lean}.
+
+\subsection{An ergodic maximizer}
+
+The compact-accumulator argument needs a maximizing invariant probability
+which is ergodic for the entire real flow, not merely for its time-one map.
+The project proves directly that the compact convex set of invariant
+probabilities has an extreme maximizer for the affine functional
+\(\mu\mapsto\int a\,\dd\mu\).  It embeds measures into the weak dual of
+bounded continuous functions, applies Krein--Milman to the maximizing
+face, and proves that an extreme invariant probability satisfies the
+full-flow zero--one law by splitting on an invariant measurable set.
+
+The result is
+\leanname{exists_ergodicInvariantProbability_isMaxOn_average} in
+\leanmodule{HGAS/Dynamics/ErgodicMaximizer.lean}.  In particular, to upper
+bound (4.4), it suffices to upper bound the reward average of every
+full-flow ergodic invariant probability.  No measurable ergodic
+decomposition theorem is used.
+
+\section{The arithmetic Fourier detector}
+\label{sec:detector}
+
+Let \(I=(A,B,c)\) be a DQL system with \(V\) variables and \(E\) rows.
+Use a torus
+\[
+           \T^{V+E}
+       =(\R/\Z)^{\{\text{private variables}\}\sqcup
+                    \{\text{equation rows}\}}.
+\]
+For \(x,s\in\Z^V\), define the private and equation exponents
+\[
+\begin{split}
+ p_j(x,s)&=x_j^2-s_j,\\
+ q_i(x,s)&=\sum_j(A_{ij}s_j+B_{ij}x_j)-c_i.
+\end{split}
+\tag{5.1}
+\]
+The full exponent vector is zero exactly when
+\[
+             s_j=x_j^2\ \text{for all }j,
+       \qquad I(x)=0.
+\tag{5.2}
+\]
+
+Choose \(0<\lambda,\eta<1\).  The expanded detector is the absolutely
+convergent Fourier series
+\[
+ \mathcal D_I(\theta)=
+ \sum_{x,s\in\Z^V}
+   \lambda^{\sum_j|x_j|^2}
+   \eta^{\sum_j|s_j|}
+   e^{2\pi i\langle (p(x,s),q(x,s)),\theta\rangle}.
+\tag{5.3}
+\]
+Haar integration deletes every nonzero Fourier character.  By (5.2),
+\[
+ \int_{\T^{V+E}}\mathcal D_I\,\dd\theta
+  =
+ \sum_{\substack{x\in\Z^V\\I(x)=0}}
+       (\lambda\eta)^{\sum_j|x_j|^2}.
+\tag{5.4}
+\]
+Every surviving term is strictly positive.  Therefore
+\[
+ \int\mathcal D_I\,\dd\theta\neq0
+       \quad\Longleftrightarrow\quad
+ I\text{ is solvable}.
+\tag{5.5}
+\]
+There is no cancellation argument hidden here: the right side of (5.4) is
+a nonnegative real series.
+
+The exact support calculation is in
+\leanmodule{HGAS/Arithmetic/PositiveConstantTerm.lean}; absolute
+summability, continuity, Haar extraction, and (5.5) are in
+\leanmodule{HGAS/Arithmetic/DetectorFourier.lean}.  The final compiler uses
+the concrete values
+\[
+                         \lambda=\frac1{256},
+            \qquad       \eta=\frac12.
+\tag{5.6}
+\]
+
+\subsection{Prime-radical clocks}
+
+Assign a distinct prime \(p_\ell\) to every fundamental phase coordinate.
+A polynomial controller on a unit circle has locked equilibria satisfying
+\[
+          p_\ell r_\ell^2=1,
+\qquad
+          \omega_\ell=p_\ell r_\ell
+              =\varepsilon_\ell\sqrt{p_\ell},
+\qquad
+          \varepsilon_\ell\in\{+1,-1\}.
+\tag{5.7}
+\]
+The phase circle rotates at angular velocity \(\omega_\ell\).  Under
+\(\R/\Z\to S^1,\ \theta\mapsto e^{2\pi i\theta}\), its frequency in turns
+is \(\omega_\ell/(2\pi)\).  The detector uses fourth powers of the
+fundamental phases, so its actual frequency is
+\[
+               \Omega_\ell
+             =\frac{2}{\pi}\,
+                \varepsilon_\ell\sqrt{p_\ell}.
+\tag{5.8}
+\]
+
+Square roots of distinct primes are linearly independent over \(\Q\).
+The project proves this by adjoining the roots one at a time and using
+the square-class obstruction; it does not import the result as an axiom.
+Signs and the common nonzero scale \(2/\pi\) preserve independence.
+Hence
+\[
+      \sum_\ell k_\ell\Omega_\ell=0,\quad k_\ell\in\Z
+      \quad\Longrightarrow\quad k_\ell=0\text{ for all }\ell.
+\tag{5.9}
+\]
+See \leanmodule{HGAS/Clocks/RadicalIndependence.lean},
+\leanmodule{HGAS/Clocks/ScaledRadicalClock.lean}, and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveSelectedDetectorPhase.lean}.
+
+For any initial phase and any horizon sequence \(T_N\to\infty\), termwise
+Cesàro integration followed by dominated summation gives
+\[
+ \frac1{T_N}\int_0^{T_N}
+        \mathcal D_I(\theta_0+t\Omega)\,\dd t
+       \longrightarrow
+ \int_{\T^{V+E}}\mathcal D_I\,\dd\theta.
+\tag{5.10}
+\]
+The arbitrary-horizon form is important because the recurrent orbit
+selected later supplies its own physical return horizons.  It is proved in
+\leanmodule{HGAS/Analysis/TorusFourierCesaroArbitraryHorizon.lean} and
+\leanmodule{HGAS/Arithmetic/DetectorFourierCesaroArbitraryHorizon.lean}.
+
+\section{The polynomial modular--Jacobi source}
+\label{sec:jacobi-source}
+
+The detector (5.3) is an analytic Fourier series, whereas the reduction
+must emit a finite polynomial vector field with rational coefficients.
+The modular--Jacobi source realizes the needed theta factors as coordinates
+of an autonomous polynomial ODE.
+
+\subsection{Unary and Jacobi coordinates}
+
+The unary modular block has four complex coordinates
+\[
+                     (A,C,E,Y).
+\]
+On the canonical theta solution these are, up to the fixed normalization,
+\[
+ A=\vartheta_2^4,\qquad
+ C=\vartheta_4^4,\qquad
+ Y=\vartheta_3,\qquad
+ E=E_2.
+\tag{6.1}
+\]
+Ramanujan/Jacobi differential identities make their derivative under
+horizontal motion a polynomial in \((A,C,E,Y)\).
+
+The reciprocal Jacobi block has ten complex coordinates
+\[
+ (p_2,p_3,p_4,H,T_1,T_2,T_3,T_4,\Delta,U).
+\tag{6.2}
+\]
+The first four encode theta-square and Eisenstein coefficient data;
+\(T_1,\ldots,T_4,\Delta\) encode an elliptic theta state; and
+\[
+                          U\,T_1=1
+\tag{6.3}
+\]
+keeps the trajectory in a regular reciprocal chart.  There are two
+commuting rational polynomial derivations: an elliptic derivation and a
+modular derivation.  Their literal sparse Gaussian-rational codes and
+realification to twenty real coordinates are in
+\leanmodule{HGAS/Modular/JacobiPolynomialCode.lean}.
+
+The unary and Jacobi blocks are linked, but retained as separate ambient
+coordinates.  Ten polynomial residuals enforce the coefficient identities,
+the two theta quadrics, the reciprocal chart, and a coherent signed root.
+These residuals form an invariant ideal.  The combined state therefore has
+fourteen complex, or twenty-eight real, coordinates and an exact finite
+polynomial compiler; see
+\leanmodule{HGAS/Modular/LinkedJacobiPolynomialCode.lean}.
+The formulas are related to the polynomial theta systems studied by
+Brezhnev, Lyakhovich, and Sharapov~\cite{BrezhnevLyakhovichSharapov2011}
+and Brezhnev~\cite{Brezhnev2013}.  All normalizations actually used in the
+reduction are rederived and checked in the project.
+
+\subsection{Controllers, phase factors, and residual drifts}
+
+There is one linked unary--Jacobi column for each DQL variable.  Polynomial
+controller circles provide the two clock coefficients of each column.
+Additional real polynomial coordinates provide:
+
+\begin{itemize}
+\item the fourth-root gauge multiplying \(T_1\);
+\item two corrected first-moment selectors;
+\item reciprocal Poisson factors with parameter \(1/2\);
+\item a right-hand-side phase oscillator; and
+\item nonnegative validity and clock-radius residual observables.
+\end{itemize}
+
+Complex polynomial codes are realified mechanically.  The controller and
+phase circle equations are tangent to their unit circles at every ambient
+point; the linked residual ideal is preserved; and every displayed ODE
+identity is proved by evaluation of the finite sparse code.  These pieces
+are assembled in the sequence beginning with
+\leanmodule{HGAS/Arithmetic/FixedDetectorPolynomialCode.lean} and ending
+with
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorCompactSourceCode.lean}.
+
+The word ``normalized'' records three important corrections which are
+literal in the code:
+
+\begin{enumerate}
+\item angular velocities are converted from radians to turns by \(2\pi\);
+\item detector phases use fourth powers, hence the factor \(4\); and
+\item the two first moments are centered at the compiler's exact constant
+  \(1/256\).
+\end{enumerate}
+
+\subsection{From zero conditional drift to a selected orbit}
+
+Later, the compact accumulator will imply that every drift coordinate has
+zero integral under a certain conditional invariant probability.  Apply
+the pointwise ergodic theorem simultaneously to the finite family of drift,
+speed, and validity coordinates.  Poincar\'e recurrence for the flow and
+its reverse supplies a point which:
+
+\begin{itemize}
+\item lies in the finite central chart;
+\item is recurrent both forward and backward in compact time;
+\item has zero validity energy, so all circle and linked residual equations
+  hold pointwise;
+\item realizes the prescribed zero drift means; and
+\item has a positive average physical-speed coordinate.
+\end{itemize}
+
+The selected object is
+\leanname{SelectedBidirectionalValidityOrbit}.  Its construction from
+conditional zero means is
+\leanname{exists_selectedBidirectionalValidityOrbit_of_conditionalBase_zero}
+in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorBidirectionalValidityOrbit.lean}.
+The bidirectional clause is not cosmetic: standardizing a column by a
+negative clock frequency reverses time, so forward recurrence alone would
+not suffice.
+
+\section{Classifying a selected Jacobi column}
+\label{sec:classification}
+
+Fix one selected detector column \(j\).  Write \(\omega_j\neq0\) for its
+private modular frequency and \(N_j\) for its linear DQL frequency.  Rescale
+time by
+\[
+                         a_j=\frac{\pi}{\omega_j}.
+\tag{7.1}
+\]
+The standardized modular clock is exactly \(\pi i\), while its real
+elliptic frequency \(\nu_j\) is defined by
+\[
+             \pi\nu_j
+       =a_j\,\frac{\omega_j+N_j}{2}.
+\tag{7.2}
+\]
+Both identities, with all signs retained, are proved in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorColumnStandardization.lean}
+and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorCanonicalRootSeed.lean}.
+
+\subsection{The level-two horocycle alternative}
+
+The unary coefficient curve determines a canonical modular
+\(\lambda\)-coordinate.  The project reconstructs a lift to the upper
+half-plane and an exact real-frame horocycle.  On the level-two frame
+quotient, a nonperiodic horocycle is equidistributed for normalized Haar
+probability, whereas periodic horocycles are closed cusp orbits.  The
+specialized Dani--Smillie theorem is proved through:
+
+\begin{enumerate}
+\item quantitative nonescape of occupation measures;
+\item avoidance of mass on the countable periodic family;
+\item good return times for compactly supported tests;
+\item the nonergodic pointwise ergodic theorem; and
+\item uniqueness of an invariant probability off the periodic set.
+\end{enumerate}
+
+The final unconditional statements are
+\leanname{gammaTwoPointwiseHorocycleEquidistribution_unconditional} and
+\leanname{gammaTwoDaniSmillieTheorem_unconditional} in
+\leanmodule{HGAS/Modular/GammaTwoOffPeriodicUnique.lean}.  The argument
+formalizes the level-two instance of Dani's invariant-probability
+classification~\cite{Dani1978} and the periodic-or-equidistributed orbit
+dichotomy of Dani and Smillie~\cite{DaniSmillie1984}; Hubbard and Miller
+provide a modern finite-area treatment of the latter
+\cite{HubbardMiller2010}.
+
+The selected detector orbit cannot lie in the Haar-generic branch.  A
+compactly supported family of theta tests has finite value along the
+selected compact orbit, but its Haar cusp moment diverges.  Exact
+orientation reversal and constant time rescaling handle either sign of
+\(\omega_j\).  Therefore the reconstructed frame orbit is periodic.
+The composition is
+\leanname{standardizedUnaryColumn_hasHorizontalOrPeriodicExactFrameLift_unconditional}
+in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorStandardizedExactFrameExclusion.lean}.
+
+\subsection{The finite closed-cusp selector}
+
+A periodic frame orbit admits a horizontal chart
+\[
+                    \tau(t)=x+s t+i y,
+             \qquad y>0,\quad s\neq0.
+\tag{7.3}
+\]
+The two compiled raw moments have Cesàro limit \(1\).  Fourier series for
+\(\vartheta_2,\vartheta_3,\vartheta_4\) on (7.3) show that the wrong cusp
+branches have zero mean.  In the surviving infinity cusp, the means force
+the coherent root scales and quartic amplitude to equal \(1\).  Thus,
+after the exact resampling back from (7.1),
+\[
+             Y(t)=\vartheta_3(\tau(t)),\qquad
+             p_4(t)=\vartheta_4(\tau(t))^2.
+\tag{7.4}
+\]
+This is proved in
+\leanmodule{HGAS/Modular/FiniteClosedCuspMeanSelector.lean},
+\leanmodule{HGAS/Modular/FiniteClosedCuspResampledMeanSelector.lean}, and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorFiniteClosedBranchSelection.lean}.
+
+The invariant residuals now recover every unary coefficient:
+\[
+\begin{split}
+ p_4^2-C=0&\Longrightarrow C=\vartheta_4^4,\\
+ Y^4-A-C=0&\Longrightarrow A=\vartheta_2^4,\\
+ 12H-E=0&\Longrightarrow H=E_2/12.
+\end{split}
+\tag{7.5}
+\]
+For the last identity, the common nonvanishing \(Y=\vartheta_3\) coordinate
+and its polynomial differential equation allow cancellation of the clock
+and \(Y\), forcing equality of the two \(E\)-coordinates.
+
+Only the sign of \(p_2\) remains.  Since
+\[
+             p_2^2=\vartheta_2(\tau)^4,
+\]
+we have \(p_2=\pm\vartheta_2(\tau)^2\).  Translation
+\(\tau\mapsto\tau+2\) changes the sign of \(\vartheta_2^2\) while fixing
+the other canonical root coordinates.  Hence one of \(\tau\) and
+\(\tau+2\) is an exact canonical seed for
+\((p_2,p_3,p_4,H)\).  This argument is
+\leanname{exists_canonicalRootSeed_of_finiteClosedSelection} in
+\leanmodule{HGAS/Modular/FiniteClosedCuspCanonicalRootSeed.lean}.
+
+\subsection{Global affine Bloch continuation}
+
+At the canonical seed, the two Jacobi quadrics vanish.  Along the complete
+trajectory, (6.3) prevents the projective coordinate \(T_1\) from
+vanishing.  Pointwise theta saturation reconstructs affine Bloch
+parameters, and uniqueness for the regular polynomial ODE propagates the
+identification for all real time.  Thus the physical column is a globally
+regular affine Jacobi--Bloch trajectory.
+
+The detector-facing result is
+\leanname{physicalColumn_exists_classifiedSeed} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorPhysicalClassifiedSeed.lean}.
+It also chooses the actual initial phase and the unique free gauge constant
+matching the physical state at time zero.  No canonical all-one phase is
+substituted.
+
+\section{The repaired three-moment theorem}
+\label{sec:three-moment}
+
+This is the most delicate identification in the lower bound.  We give it
+in detail, including the failed zero-ratio branch which motivated the DQL
+augmentation.
+
+\subsection{Quadratic--geometric coefficients}
+
+After multiplication by the fourth-root gauge, an affine Bloch theta trace
+has coefficients
+\[
+                   C_k=C\,R^{k^2}S^k,
+                  \qquad k\in\Z,
+\tag{8.1}
+\]
+with \(R,S\neq0\).  Integer translations \(k\mapsto k-\ell\) and reflected
+translations \(k\mapsto-k-\ell\) retain the same form.  The direct
+factorization is proved in
+\leanmodule{HGAS/Modular/AffineBlochQuadraticGeometric.lean}.
+
+A normalized sequence \(R^{k^2}S^k\) is determined by its coefficients at
+\(k=1\) and \(k=-1\).  Indeed their product determines \(R^2\), so either
+\((R,S)=(R',S')\) or \((R,S)=(-R',-S')\).  The second alternative gives the
+same sequence because \(k^2+k\) is even.  This elementary rigidity lemma is
+formalized in
+\leanmodule{HGAS/Modular/QuadraticGeometricSequence.lean}.
+
+\subsection{What the three moments select}
+
+Let \(\Omega\neq0\) be the private angular frequency and put
+\[
+                       \rho=\frac{N}{\Omega}.
+\tag{8.2}
+\]
+The quadratic dispersion of the trace makes its mean resonance equation
+factor into two Bloch classes.  If \(\rho\) is irrational, the two possible
+classes are disjoint:
+\[
+        a\in\Z
+        \qquad\hbox{or}\qquad
+        a\in-\rho+\Z.
+\tag{8.3}
+\]
+In the first class, the zeroth and the two twisted first moments select
+\[
+              C_{-\ell},\quad C_{1-\ell},\quad C_{-1-\ell}.
+\tag{8.4}
+\]
+In the reflected class they select the same three neighboring coefficients
+in reverse order.  The normalized zeroth moment is \(1\); the \(+1\) and
+\(-1\) moments match the corresponding target theta coefficients.  By the
+quadratic--geometric lemma, every coefficient matches the target, hence the
+whole theta trace matches.
+
+The twisting constants are the actual initial clock characters.  Their
+norm is one, so they are nonzero and may be cancelled; they need not equal
+one.  Arbitrary recurrent horizon sequences are permitted.  The exact
+phase-free theorem is
+\leanname{quadraticTrace_eq_target_of_three_moments} in
+\leanmodule{HGAS/Modular/JacobiThreeMomentTargetRigidity.lean}.
+
+\subsection{Why \(\rho=0\) cannot be ignored}
+
+\begin{warning}[A genuine discarded argument]
+When \(\rho=0\), the direct and reflected resonance classes in (8.3)
+coincide.  The three averages may then see sums of two coefficients rather
+than one coefficient, and the preceding proof is false.
+\end{warning}
+
+This is not merely a missing side condition.  There are
+quadratic--geometric counterfamilies
+\[
+                 C_k=\lambda^{k^2}A^{k^2}B^k,
+       \qquad |A|=1,\qquad B+B^{-1}=2A^{-1},
+\tag{8.5}
+\]
+whose zeroth and two first resonant moments have the prescribed values
+although the trace is not the canonical target.  For example, one may take
+\[
+                    A=i,\qquad
+                    B=i(\sqrt2-1).
+\tag{8.6}
+\]
+Thus an older theorem which admitted the zero-ratio branch is not used in
+the final dependency chain.
+
+The repair is exactly Section~\ref{sec:augmentation}.  Let
+\(\ell_j\) be the nonzero linear DQL character of column \(j\), and let
+\(e_j\) be its private character.  The selected torus frequency
+\(\Omega_{\rm tor}\) has no nontrivial integer annihilator.  If
+\[
+       \frac{\langle\ell_j,\Omega_{\rm tor}\rangle}
+            {\langle e_j,\Omega_{\rm tor}\rangle}
+          =\frac ab\in\Q,
+\tag{8.7}
+\]
+then
+\[
+             b\ell_j-ae_j
+\tag{8.8}
+\]
+annihilates \(\Omega_{\rm tor}\).  Nonresonance makes (8.8) the zero
+character.  Its private coordinate gives \(a=0\); a nonzero equation
+coordinate of \(\ell_j\) then gives \(b=0\), contradicting the choice of
+denominator.  Therefore (8.7) is irrational for every augmented column.
+
+This finite-character proof is
+\leanname{linear_div_private_pairing_irrational} and its physical-frequency
+specialization
+\leanname{numberFrequency_div_omegaFrequency_irrational} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveColumnFrequencyIrrational.lean}.
+
+\subsection{Canonical theta output}
+
+Freeze the target Gaussian theta coefficients at the actual initial
+detector phase.  They are quadratic--geometric, and the compiled \(+1\)
+and \(-1\) selector characters multiply the two neighboring target
+coefficients to \(1/256\).  The corrected moment limits and irrationality
+argument therefore give, for every column \(j\) and every \(t\geq0\),
+\[
+       \mathrm{gauge}_j(t)\,T_{1,j}(t)
+       =
+       \sum_{n\in\Z}
+         \mathrm{thetaTerm}_{I,j,n}
+           \bigl(1/256,\theta(t)\bigr).
+\tag{8.9}
+\]
+This is exactly
+\leanname{hasCanonicalThetaOutputs} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveCanonicalThetaOutputs.lean}.
+Its sole structural premise is that every linear column is nonzero, which
+(3.12) supplies for every final universal instance.
+
+\section{The yes-instance nonzero-mean theorem}
+\label{sec:yes}
+
+Assume \(I\) is solvable and suppose, toward a contradiction, that every
+conditional compiled drift coordinate has mean zero.  Section
+\ref{sec:jacobi-source} then supplies a selected bidirectionally recurrent
+validity orbit \(O\).
+
+\subsection{Exact factorization of the physical detector}
+
+The selected orbit begins at an arbitrary physical phase.  Let
+\(\theta(t)=\theta(0)+t\Omega\) be its detector phase in turns.  The
+right-hand-side oscillator has the same frequency as the flattened DQL
+right-hand-side character, including the compiler's factor \(-4\).
+Uniqueness for the corresponding linear complex ODE gives
+\[
+          R_{\rm rhs}(t)
+       = \zeta\,
+          \chi_{\rm rhs}(\theta(t)),
+\qquad
+          \zeta\neq0.
+\tag{9.1}
+\]
+The constant \(\zeta\) is retained; it is not silently normalized to one.
+
+The reciprocal graph residuals give the two Poisson factors
+\[
+       G_+=(1-\tfrac12 W)^{-1},\qquad
+       G_-=(1-\tfrac12 W^{-1})^{-1},
+\tag{9.2}
+\]
+where \(|W|=1\).  The absolutely convergent two-sided geometric identity
+\[
+ \sum_{s\in\Z}\left(\frac12\right)^{|s|}W^s
+  =
+ \frac{3/4}{(1-\tfrac12W)(1-\tfrac12W^{-1})}
+\tag{9.3}
+\]
+identifies the compiler's literal factor \((3/4)G_+G_-\) with the desired
+Poisson series.
+
+Substituting the canonical theta output (8.9), multiplying the finitely
+many column factors, and using absolute summability yields the pointwise
+identity
+\[
+          \mathrm{detectorValue}_I(O(t))
+       =  \zeta\,\mathcal D_I(\theta(t))
+\qquad(t\geq0).
+\tag{9.4}
+\]
+All phase, sign, fourth-power, \(2\pi\), \(3/4\), and \(1/256\)
+normalizations in (9.1)--(9.4) are proved in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorSelectedPhysicalPhase.lean}
+and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorSelectedFactorization.lean}.
+
+\subsection{Contradictory Ces\`aro limits}
+
+By (5.9), (5.10), and (9.4), along the selected physical horizons,
+\[
+ \frac1{T_N}\int_0^{T_N}
+       \mathrm{detectorValue}_I(O(t))\,\dd t
+   \longrightarrow
+ \zeta\int_{\T^{V+E}}\mathcal D_I\,\dd\theta.
+\tag{9.5}
+\]
+Because \(I\) is solvable, (5.5) makes the integral nonzero; because
+\(\zeta\neq0\), the limit in (9.5) is nonzero.
+
+On the other hand, the selected orbit was obtained from the assumption
+that every conditional drift mean is zero.  The detector drift coordinate
+therefore has Ces\`aro limit zero along the same physical horizons.  A
+Hausdorff space has unique limits, giving a contradiction.
+
+The analytic statement is
+\leanname{false_of_solvable_and_canonicalThetaOutputs} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveSelectedDetectorAverage.lean}.
+The passage back to conditional invariant means is
+\leanname{not_conditionalBaseDriftZero_of_solvable} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveNonzeroMeanFromTheta.lean}.
+Consequently:
+if \(\mu\) is an ergodic invariant probability whose finite chart has
+positive mass, and \(\mu_{\rm fin}\) is its conditional probability there,
+then
+\[
+ I\text{ solvable}
+ \quad\Longrightarrow\quad
+ \exists q\qquad
+       \int b_{I,q}\,\dd\mu_{\rm fin}\ne0 .
+\tag{9.6}
+\]
+
+\section{The no-instance invariant finite graph}
+\label{sec:no}
+
+Now assume \(I\) is not solvable.  The construction must produce one
+invariant probability with strictly positive reward.  This branch does not
+use the selected-orbit contradiction from Section~\ref{sec:yes}.
+
+\subsection{The orbit-closure Fourier model}
+
+Choose the explicit positive unit equilibrium of every prime controller.
+Its phase flow is a translation with frequencies
+\[
+                 \frac1{2\pi}
+                  \bigl(\varepsilon_\ell\sqrt{p_\ell}\bigr)_\ell.
+\tag{10.1}
+\]
+The closure of its orbit is a compact torus, and the orbit is dense there.
+Every compiled drift coordinate restricts to an absolutely convergent real
+Fourier family
+\[
+                  g_q(\theta)
+          =\sum_{r\in\mathcal I_q}
+                c_{q,r}\,
+                e^{2\pi i\langle k_{q,r},\theta\rangle}.
+\tag{10.2}
+\]
+The complete finite-code-to-Fourier crosswalk is in
+\leanmodule{HGAS/Analysis/NormalizedCorrectedCanonicalDriftFourierFamily.lean}
+and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedCanonicalOrbitClosureModel.lean}.
+
+When \(I\) has no solution, every zero Fourier mode in (10.2) vanishes.
+For the detector coordinate this is precisely the contrapositive of the
+constant-term calculation (5.4); the other validity and centered-moment
+coordinates have zero modes by their explicit normalization.  Thus
+\[
+                         c_{q,r}=0
+                    \quad\hbox{whenever}\quad
+                         k_{q,r}=0.
+\tag{10.3}
+\]
+
+\subsection{Small divisors and a bounded primitive}
+
+For a nonzero integer character \(k\), its frequency
+\[
+            \langle k,\Omega\rangle
+       =\frac1{2\pi}\sum_\ell
+              k_\ell\varepsilon_\ell\sqrt{p_\ell}
+\tag{10.4}
+\]
+is nonzero.  More is needed: division by (10.4) must preserve convergence.
+The sum in (10.4) is an algebraic number in the finite multiquadratic
+extension generated by the selected square roots.  Taking the product of
+all Galois conjugates gives a nonzero rational integer after denominators
+are cleared.  Bounding all conjugate factors except the original one gives
+an effective lower bound for
+\(|\langle k,\Omega\rangle|\) in terms of the radical conjugate height of
+\(k\).
+
+The detector coefficients have Gaussian/geometric decay.  The development
+proves the weighted summability
+\[
+  \sum_r |c_{q,r}|\,
+     H(k_{q,r})^{D_{\rm rad}-1}<\infty,
+\tag{10.5}
+\]
+which dominates the reciprocal small divisor.  Therefore
+\[
+ U_q(\theta)
+   =\sum_{r:k_{q,r}\neq0}
+       \frac{c_{q,r}}
+            {2\pi i\langle k_{q,r},\Omega\rangle}
+       e^{2\pi i\langle k_{q,r},\theta\rangle}
+\tag{10.6}
+\]
+converges uniformly and differentiates along the translation flow to
+\(g_q\).  The radical lower bound, summability budget, and primitive
+construction occur in
+\leanmodule{HGAS/Clocks/RadicalSmallDivisor.lean},
+\leanmodule{HGAS/Analysis/CanonicalEffectivePrimitiveBudget.lean}, and
+\leanmodule{HGAS/Analysis/NormalizedCorrectedCanonicalEffectivePrimitiveBudget.lean}.
+
+\subsection{Embedding the primitive as an invariant graph}
+
+Scale the primitive vector by a positive rational gain \(\kappa\).  The
+gain is chosen effectively from exact finite coefficient bounds so that
+the graph lies well inside the finite stereographic accumulator chart.
+The base modular/Jacobi orbit is simultaneously centrally compactified.
+There is a fixed constant \(c_{\rm cen}>0\) such that the product \(W_0\)
+of squared central chart weights satisfies
+\[
+                       W_0\geq c_{\rm cen}
+\tag{10.7}
+\]
+on the selected orbit closure.  The gain is small enough that the
+stereographic scalar coordinate \(W\) of the primitive graph satisfies
+\[
+                       W\geq1-\frac{c_{\rm cen}}4.
+\tag{10.8}
+\]
+
+The source reward is
+\[
+                   \mathcal R=W+2W_0-1-\varepsilon.
+\tag{10.9}
+\]
+The effective reward margin satisfies
+\(\varepsilon\leq3c_{\rm cen}/8\).  The formal estimates give
+\[
+                   \mathcal R\geq
+                   \delta:=\frac{3c_{\rm cen}}8>0
+\tag{10.10}
+\]
+on the invariant graph.  Pushing Haar probability on the orbit-closure
+torus to this graph produces the required invariant probability.
+
+The exact endpoint is \leanname{finite_graph} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveNoInstanceFiniteGraph.lean};
+its explicit margin is proved in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorExplicitFiniteGraphGap.lean}.
+
+\section{Compactification and the strict sign dichotomy}
+\label{sec:compact-sign}
+
+\subsection{Central compactification}
+
+Affine source blocks are mapped to central spheres.  If \(y=x/w\) is an
+affine chart and \(P(y)\) is polynomial, multiplying by a sufficiently
+large common even power of the central weights clears every denominator.
+The resulting polynomial field is tangent to every sphere factor,
+including points on the equator.  Inside the finite chart it is a positive
+time change of the original source.  The sparse rational compiler and its
+global tangency theorem are in
+\leanmodule{HGAS/Compactification/MixedCentralPolynomialCode.lean},
+\leanmodule{HGAS/Compactification/MixedCentralPolynomialField.lean}, and
+\leanmodule{HGAS/Compactification/MixedCentralPolynomialGlobalTangency.lean}.
+
+The final normalized source uses two sphere blocks: the centrally
+compactified base and the accumulator sphere.  Degree bounds and the
+common clearing exponent are computed from finite syntax and are constant
+throughout the fixed universal family.
+
+\subsection{The stereographic accumulator}
+
+For a drift vector \(g=(g_1,\ldots,g_m)\), adjoin a sphere coordinate
+\((U,W)\in\R^m\times\R\), \(\|U\|^2+W^2=1\), with equations
+\[
+\begin{split}
+ U_i'&=(1+W)g_i-(U\cdot g)U_i,\\
+ W'&=-(1+W)(U\cdot g).
+\end{split}
+\tag{11.1}
+\]
+These are the inverse-stereographic compactification of translation by
+the primitive of \(g\).  Direct differentiation proves tangency to the
+accumulator sphere.  The literal polynomial code and evaluation theorem
+are in \leanmodule{HGAS/Accumulator/PolynomialCode.lean}.
+
+If an invariant probability gives positive mass to the finite chart
+\(W\neq-1\), condition it on that invariant chart and integrate the
+derivative of the inverse stereographic coordinates.  Invariance makes
+each derivative integral zero; the chart equations reduce this to
+\[
+                           \int g_i\,\dd\mu=0
+\quad\hbox{for every }i.
+\tag{11.2}
+\]
+This compact drift obstruction is proved in
+\leanmodule{HGAS/Accumulator/CompactDriftObstruction.lean}.
+
+\subsection{Reward on boundary and infinity}
+
+Recall (10.9).  On a central boundary face, \(W_0=0\), and \(W\leq1\), so
+\[
+                            \mathcal R\leq-\varepsilon.
+\tag{11.3}
+\]
+At accumulator infinity, \(W=-1\) and \(W_0\leq1\), giving the same bound.
+The elementary inequalities are in
+\leanmodule{HGAS/Accumulator/RewardGap.lean}.
+
+\subsection{The two cases}
+
+Let \(P\) be the proposition ``\(I\) is solvable'' and choose an ergodic
+invariant probability maximizing \(\int\mathcal R\).
+
+If \(P\) holds, ergodicity makes the invariant finite chart have measure
+zero or one.  If it had measure one, (11.2) would say that every
+conditional drift mean is zero, contradicting (9.6).  It therefore has
+measure zero, and (11.3) gives
+\[
+                    \mathcal M(\mathcal R)\leq-\varepsilon<0.
+\tag{11.4}
+\]
+
+If \(P\) fails, Section~\ref{sec:no} supplies an invariant graph probability
+with reward average at least \(\delta>0\), so
+\[
+                    \mathcal M(\mathcal R)\geq\delta>0.
+\tag{11.5}
+\]
+Together,
+\[
+        \boxed{\quad
+        \mathcal M(\mathcal R)<0
+          \quad\Longleftrightarrow\quad
+        I\text{ is solvable}.
+        \quad}
+\tag{11.6}
+\]
+This abstract two-case proof is
+\leanname{maximalInvariantAverage_neg_iff_of_compactAccumulatorGap} in
+\leanmodule{HGAS/Accumulator/CompactSignDichotomy.lean}.
+
+The two instance-dependent facts (9.6) and (10.10) are packaged by
+\leanname{gapOfCanonicalThetaOutputs} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveGapFromCanonicalTheta.lean}.
+For the augmented universal family, the resulting unconditional gap is
+\leanname{gap} in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean}.
+
+\section{The homogeneous product-sphere wrapper}
+\label{sec:wrapper}
+
+At this stage the source is a rational polynomial flow tangent to a compact
+product of spheres, with reward \(\mathcal R\), and (11.6) is known.  The
+wrapper converts this compact angular system into one homogeneous polynomial
+field on an ordinary Euclidean space.
+
+\subsection{A rational two-sheeted chart}
+
+Add one coordinate \(z\).  On the Euclidean unit sphere, use the two sheets
+\[
+                    (k+1)z^2=1,
+\tag{12.1}
+\]
+where \(k\) is the number of source sphere blocks.  Source coordinates are
+represented as \(zy\).  If the source field/reward degree bound is the odd
+integer \(D\), multiplying chart polynomials by the rational integer
+\((k+1)^{(D-1)/2}\) cancels the power of \(z\) on both sheets.  No
+\(\sqrt{k+1}\) coefficient is introduced.
+
+Scaled block radii
+\[
+             s_b=(k+1)\sum_{j\in b}x_j^2
+\tag{12.2}
+\]
+equal \(1\) on the intended full stratum.  Division-free
+tangentialization makes the angular code tangent to every block sphere.
+A radius-cleanup field drives every other block-radius configuration toward
+the full stratum while leaving proper faces invariant.  Proper faces
+receive reward \(-1\); on the full stratum the reward is exactly the source
+reward \(\mathcal R\).
+
+\subsection{Parity homogenization}
+
+The raw angular and reward polynomials have the correct parity but may
+contain several lower degrees.  Multiplying each monomial by a suitable
+power of \(\|x\|^2\) makes the angular part homogeneous of
+\[
+                         d=D+2(k+1)
+\tag{12.3}
+\]
+and the reward homogeneous of degree \(d-1\), without changing either
+function on the unit sphere.  The final field is
+\[
+                           F_{\rm fin}(x)
+                  =Y_{\rm hom}(x)+A_{\rm hom}(x)x.
+\tag{12.4}
+\]
+It is rational and homogeneous of odd degree \(d\), and on the sphere its
+angular field and radial reward are exactly the wrapped source data.
+
+Invariant-average bookkeeping on the two sheets and proper faces proves
+\[
+   0\text{ is GAS for }F_{\rm fin}
+     \quad\Longleftrightarrow\quad
+   \mathcal M(\mathcal R)<0.
+\tag{12.5}
+\]
+The finite construction is
+\leanmodule{HGAS/Wrapper/UnitSpherePolynomialWrapper.lean}; the exact GAS
+equivalence is
+\leanname{CompactSignSourceCertificate.finalField_gas_iff_solvable} in
+\leanmodule{HGAS/Compiler/CompactSignSourceWrapper.lean}.
+
+Combining (11.6) and (12.5) gives, for every augmented DQL instance,
+\[
+       0\text{ is GAS for the emitted homogeneous field}
+       \quad\Longleftrightarrow\quad
+       I\text{ is solvable}.
+\tag{12.6}
+\]
+
+\section{Freezing the resources and proving hardness}
+\label{sec:fixed}
+
+The remaining question is effectivity.  A semantic equivalence such as
+(12.6) is insufficient unless the finite output code is computable from
+the universal-halting input and its dimension and degree are independent
+of that input.
+
+\subsection{Why the resource bounds are fixed}
+
+In the fixed universal DQL family, input specialization changes
+right-hand-side constants but not the quadratic and linear character
+tables.  Augmentation preserves this common character data.  Every
+compiler degree---the theta detector degree, central clearing exponent,
+accumulator degree, wrapper degree, and final homogeneous degree---is a
+function of the fixed row/variable counts and common character table.
+Therefore it is independent of \(t\).
+
+This is formalized by the
+\leanname{SameCharacterData} lemmas in
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedUniversalResources.lean}.
+The same file fixes:
+
+\begin{itemize}
+\item the compact source dimension;
+\item the two-block sphere assignment;
+\item a proof that the source product sphere is nonempty;
+\item the common odd wrapper degree; and
+\item the computable finite source field/reward code.
+\end{itemize}
+
+\subsection{The effectivity firewall}
+
+The structure
+\[
+\leanname{FixedUniversalDQLCompactSignSourceFamily}
+\]
+in
+\leanmodule{HGAS/Compiler/FixedUniversalDQLCompactSignSourceFamily.lean}
+separates finite code from semantic proof data.  Its parameters and fields
+supply:
+
+\begin{enumerate}
+\item exact DQL solvability versus unary universal halting;
+\item one fixed source block assignment, a nonempty source product sphere,
+  and one fixed odd wrapper degree at least three;
+\item a compact-sign certificate for every input;
+\item one raw output-code function;
+\item equality of that raw code with the certificate's field; and
+\item computability of the raw output-code function.
+\end{enumerate}
+
+The certificate may contain flows, invariant probabilities, real limits,
+and classical choices, but the emitted code function is built only from
+finite rational syntax.  Its computability theorem composes primitive-
+recursive DQL augmentation, controller parameter generation, complex
+realification, polynomial compactification, accumulator code, and the
+homogeneous wrapper.
+
+For the final family, the theorem
+\[
+\leanname{hgasQ_output_iff_predicate}
+\]
+states, for every \(t\),
+\[
+ \HGAS_{\Q}(n_\ast,d_\ast)
+      \bigl(\mathrm{outputCode}(t)\bigr)
+ \quad\Longleftrightarrow\quad
+ \mathrm{Predicate}(t).
+\tag{13.1}
+\]
+Since \(\mathrm{outputCode}\) is computable, (13.1) is a computable
+many-one reduction.  The c.e. upper bound from Theorem~\ref{thm:upper}
+then proves
+\[
+             \HGAS_{\Q}(n_\ast,d_\ast)
+             \text{ is }\Sigma^0_1\text{-complete}.
+\tag{13.2}
+\]
+This is precisely
+\leanname{fixedPair_sigmaOneComplete}.
+
+\section{Cubicization and cofinal propagation}
+\label{sec:cubic}
+
+Write \(d_\ast=2k_\ast+1\), with \(k_\ast\geq1\).  There are two
+fixed-parameter computable finite-code transformations.
+
+\subsection{The stabilized Veronese cubic lift}
+
+Map \(x\in\R^{n_\ast}\) to the vector \(v_{k_\ast}(x)\) of all monomials
+of degree \(k_\ast\).  If \(F\) has degree \(2k_\ast+1\), differentiating
+\(v_{k_\ast}(x(t))\) yields a cubic polynomial expression in the Veronese
+coordinates on the Veronese variety.  Away from that variety, add a fixed
+rational cubic penalty which drives the toric defining relations to zero.
+
+The formal construction fixes one natural multiplier \(M_{n,k}\) for each
+fixed pair \((n,k)\), using \leanname{Classical.choice} on the proved
+geometric existence theorem.  For an input field \(F\), the emitted gain
+is
+\[
+       M_{n,k}\bigl(1+\lVert F\rVert_{1,\mathrm{coeff}}\bigr).
+\]
+The coefficient norm is executable, and
+\(\leanname{Primrec.const}\,M_{n,k}\) makes the resulting map primitive
+recursive in \(F\).  The formalization therefore proves fixed-\((n,k)\)
+computability; it does not formalize real quantifier elimination,
+numerically extract \(M_{n,k}\), or give one algorithm computing the
+multiplier from varying \((n,k)\).  The manuscript gives a paper-level
+uniform strengthening by terminating rational searches with real
+quantifier elimination.
+
+The penalty creates a uniformly negative transverse angular block, while
+on the toric core the radial cocycle is the source cocycle.  Splitting
+invariant probabilities between the core and its complement proves the
+exact equivalence
+\[
+              F\text{ is GAS}
+       \quad\Longleftrightarrow\quad
+              \operatorname{CubicLift}(F)\text{ is GAS}.
+\tag{14.1}
+\]
+Malformed source codes are sent to a syntactically homogeneous cubic
+negative instance, so the map is correct on all raw inputs.
+
+The semantic theorem is
+\leanname{sourceGAS_iff_stabilizedCubicGAS} in
+\leanmodule{HGAS/Veronese/CubicLiftGASConjugacy.lean}.  The primitive-
+recursive sparse compiler and fixed-parameter gain are in
+\leanmodule{HGAS/Computability/CubicLiftCodeCompiler.lean} and
+\leanmodule{HGAS/Computability/CubicLiftEffectiveGain.lean}.  Its target
+dimension is exactly \(N_\ast\) from (1.4).
+
+\subsection{Dimension and odd-degree padding}
+
+From a cubic field, adjoin any fixed number of independent cubic sinks.
+To raise degree from \(3\) to \(3+2j\), multiply the old block by a suitable
+even radial power and give the new sink coordinates compatible homogeneous
+negative dynamics.  Product-GAS and homogeneity calculations give exact
+preservation and reflection of GAS.  The finite compiler is
+\leanmodule{HGAS/Propagation/DegreePaddingCode.lean}.
+
+For \(N\geq N_\ast\), take \(N-N_\ast\) sink dimensions.  Every odd
+\(d\geq3\) has the form
+\[
+                        d=3+2\frac{d-3}{2}.
+\tag{14.2}
+\]
+Thus the fixed-pair reduction (13.1) propagates to every target pair in
+Theorem~\ref{thm:main}.  The exact composition is
+\leanname{hgasQ_manyOneReducible_cofinalFixedPair} in
+\leanmodule{HGAS/Propagation/CofinalFixedPairReduction.lean}, and
+\(\Sigma^0_1\)-membership is supplied again by
+Theorem~\ref{thm:upper}.  This completes the proof of
+Theorem~\ref{thm:main}.
+
+\section{Relation to the literature}
+\label{sec:literature}
+
+\subsection{Stability and decidability}
+
+Classical work on homogeneous systems establishes strong structural
+properties and converse Lyapunov theorems; see Samard\v zija
+\cite{Samardzija1983} and Rosier~\cite{Rosier1992}.  Ahmadi proved strong
+NP-hardness for deciding asymptotic stability of cubic homogeneous vector
+fields and explicitly isolated the decidability question
+\cite{Ahmadi2012}.  Ahmadi and El Khadir proved algebraic/rational
+Lyapunov results for stable homogeneous polynomial fields
+\cite{AhmadiElKhadir2020}; Ahmadi and Parrilo studied SOS certificates in
+several structured settings~\cite{AhmadiParrilo2017}.
+
+The result here is of a different recursion-theoretic strength.  NP-hardness
+does not rule out an algorithm; \(\Sigma^0_1\)-completeness does.  Moreover,
+the lower bound already holds for one fixed dimension and degree, and after
+the Veronese lift it holds at cubic degree in every sufficiently large fixed
+dimension.  The c.e. upper bound identifies the exact arithmetical level and
+shows that positive instances can be certified even though no total
+decision procedure exists.
+
+There is a broader literature on undecidability and computational
+universality for polynomial ODEs, for example Buser and Scarpellini
+\cite{BuserScarpellini2007} and Gra\c ca, Campagnolo, and Buescu
+\cite{GracaCampagnoloBuescu2008}.  Those results motivate the general
+question but do not directly give the fixed homogeneous-GAS statement:
+homogeneity, a single equilibrium at the cone tip, forward completeness,
+and global attraction impose a substantially different geometry.
+
+\subsection{Arithmetic and special-function inputs}
+
+The arithmetic ancestry is the DPRM theorem
+\cite{DavisPutnamRobinson1961,Matiyasevich1970,Matiyasevich1971,
+Matiyasevich1993}.  The formal project proves the required primitive-
+recursive Diophantine closure internally, then uses the elementary
+four-square and multiplication-gate reductions to reach DQL form.
+
+The finite polynomial theta system follows identities standard in the
+theory of Jacobi theta functions; useful references are Chandrasekharan
+\cite{Chandrasekharan1985}, Mumford~\cite{Mumford1983}, and the NIST DLMF
+\cite{DLMF}.  Polynomial dynamical formulations closely related to the
+one used here appear in
+\cite{BrezhnevLyakhovichSharapov2011,Brezhnev2013}.  The horocycle branch
+uses the level-two specialization of the classical periodic-or-
+equidistributed dichotomy of Dani--Smillie
+\cite{DaniSmillie1984,HubbardMiller2010}.
+
+These citations identify provenance and comparison.  They are not opaque
+proof constants in the \Lean{} theorem.  The concrete theta identities,
+finite quotient, nonescape estimates, occupation-measure argument,
+pointwise equidistribution statement, and every normalization used by the
+compiler have formal proofs in the dependency closure.
+
+Kernel checking establishes the stated formal implication; it does not
+establish bibliographic priority or replace specialist peer review.  This
+is a new manuscript-level result and should be treated as unrefereed until
+the reduction and its relationship to the broader literature have received
+independent expert review.
+
+\subsection{Scope of the present result}
+
+The formal theorem settles the general and fixed-resource decidability
+question for rational homogeneous polynomial fields in the stated
+cofinal range.  It leaves at least three natural quantitative problems:
+
+\begin{enumerate}
+\item evaluate or drastically reduce the chosen fixed constants;
+\item determine the exact low-dimensional boundary, especially
+  \(\HGAS_{\Q}(3,3)\); and
+\item find a substantially simpler reduction which avoids the modular
+  source while preserving fixed cubic resources.
+\end{enumerate}
+
+The first two are not consequences of the present proof.  In particular,
+the phrase ``cubic undecidability'' throughout this document always means
+cubic degree in every sufficiently large fixed dimension.
+
+\section{Lean correspondence and reusable modules}
+\label{sec:crosswalk}
+
+The formalization was organized so that the manuscript proof and code have
+the same narrow interfaces.  The following table lists the principal
+crosswalk.
+
+\begin{center}
+\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.27\textwidth}
+                >{\raggedright\arraybackslash}p{0.63\textwidth}}
+\toprule
+Mathematical step & Principal module or theorem\\
+\midrule
+Raw rational field language &
+\leanmodule{HGAS/Computability/HGASLanguage.lean};
+\leanname{HGASQ}\\
+\(\Sigma^0_1\) vocabulary and universal source &
+\leanmodule{HGAS/Computability/SigmaOne.lean};
+\leanname{universalHalts_sigmaOneComplete}\\
+C.e. upper bound &
+\leanmodule{HGAS/Lyapunov/RationalHomogeneousConverse.lean};
+\leanname{hgasQ_re_of_oddDegree}\\
+Primitive-recursive Diophantine closure &
+\leanmodule{HGAS/Arithmetic/PrimitiveRecursiveDiophantine.lean};
+\leanname{binaryPrimrecRel_dioph}\\
+Unconditional fixed DQL &
+\leanmodule{HGAS/Arithmetic/UnconditionalMRDP.lean} and
+\leanmodule{HGAS/Arithmetic/UnconditionalFixedDQL.lean}\\
+Nonzero-column repair &
+\leanmodule{HGAS/Arithmetic/DQLNonzeroLinearAugmentation.lean};
+\leanname{augment_solvable_iff}\\
+Positive Fourier selector &
+\leanmodule{HGAS/Arithmetic/PositiveConstantTerm.lean} and
+\leanmodule{HGAS/Arithmetic/DetectorFourier.lean}\\
+Prime-radical nonresonance &
+\leanmodule{HGAS/Clocks/RadicalIndependence.lean} and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveSelectedDetectorPhase.lean};
+\leanname{physicalDetectorTurnsFrequency_hasNoCharacter}\\
+Polynomial Jacobi compiler &
+\leanmodule{HGAS/Modular/JacobiPolynomialCode.lean} and
+\leanmodule{HGAS/Modular/LinkedJacobiPolynomialCode.lean}\\
+Bidirectional recurrent selection &
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorBidirectionalValidityOrbit.lean}\\
+Level-two equidistribution &
+\leanmodule{HGAS/Modular/GammaTwoOffPeriodicUnique.lean};
+\leanname{gammaTwoDaniSmillieTheorem_unconditional}\\
+Canonical root and Bloch continuation &
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorCanonicalRootSeed.lean} and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedFixedDetectorPhysicalClassifiedSeed.lean}\\
+Repaired three-moment rigidity &
+\leanmodule{HGAS/Modular/JacobiThreeMomentTargetRigidity.lean} and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveColumnFrequencyIrrational.lean}\\
+Canonical theta output &
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveCanonicalThetaOutputs.lean}\\
+Yes-instance nonzero drift &
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveNonzeroMeanFromTheta.lean}\\
+No-instance finite graph &
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveNoInstanceFiniteGraph.lean}\\
+Compact sign dichotomy &
+\leanmodule{HGAS/Accumulator/CompactSignDichotomy.lean} and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedEffectiveGapFromCanonicalTheta.lean}\\
+Homogeneous wrapper &
+\leanmodule{HGAS/Compiler/CompactSignSourceWrapper.lean} and
+\leanmodule{HGAS/Wrapper/UnitSpherePolynomialWrapper.lean}\\
+Fixed effective family &
+\leanmodule{HGAS/Compiler/FixedUniversalDQLCompactSignSourceFamily.lean} and
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean}\\
+Cubic/cofinal propagation &
+\leanmodule{HGAS/Computability/CubicLiftEffectiveGain.lean} and
+\leanmodule{HGAS/Propagation/CofinalFixedPairReduction.lean} and
+\leanmodule{HGAS/Propagation/CofinalSigmaOne.lean}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Several abstractions are intentionally more reusable than this application:
+
+\begin{itemize}
+\item \leanname{DQLNonzeroLinearAugmentation.augment} applies to every
+  finite DQL system.
+\item \leanname{FixedUniversalDQLCompactSignSourceFamily} accepts any
+  fixed-arity DQL family with the required semantic and computable-code
+  fields.
+\item \leanname{quadraticTrace_eq_target_of_three_moments} is independent
+  of theta functions.  Its reusable interface takes quadratic--geometric
+  source and target data, nonzero private frequency and twists, an
+  irrational ratio, summability, divergent horizons, and three moment
+  limits.
+\item the invariant-average, ergodic-maximizer, compact-accumulator, and
+  product-sphere wrapper theorems do not mention universal halting.
+\item the stabilized Veronese GAS reduction accepts every finite
+  homogeneous field code in positive dimension and odd degree at least
+  three.
+\end{itemize}
+
+\section{Trust, audits, and reproducibility}
+\label{sec:trust}
+
+\subsection{No hidden mathematical postulate}
+
+The final theorem imports
+\leanmodule{HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean}
+through \leanmodule{HGAS.lean}.  The source tree contains no declaration
+matching a strict scan for project \leanname{axiom}, \leanname{unsafe},
+\leanname{sorry}, or \leanname{admit}.  In particular:
+
+\begin{itemize}
+\item MRDP closure is a theorem, not an axiom;
+\item the level-two Dani--Smillie statement is a theorem, not an interface
+  hypothesis;
+\item canonical theta outputs are proved for the augmented family;
+\item the no-instance graph is constructed, not assumed; and
+\item the final family has no remaining gap or theta parameter.
+\end{itemize}
+
+Running \texttt{\#print axioms} on
+\leanname{fixedPair_sigmaOneComplete},
+\leanname{cofinal_sigmaOneComplete},
+\leanname{cubic_sigmaOneComplete},
+\leanname{fixedPair_not_computable}, and
+\leanname{cubic_not_computable} (as well as the two named
+non-c.e.-complement consequences) returns exactly
+\[
+       [\,\leanname{propext},\
+          \leanname{Classical.choice},\
+          \leanname{Quot.sound}\,].
+\tag{16.1}
+\]
+These are ordinary logical foundations of \Lean{}/\Mathlib{}; there is no
+project-specific axiom and no \leanname{sorryAx}.
+
+The audited environment is Lean \(4.30.0\) with Mathlib tag \(v4.30.0\),
+commit
+\leanname{c5ea00351c28e24afc9f0f84379aa41082b1188f}.
+For the prover and library, see de Moura and Ullrich~\cite{Lean4} and the
+Mathlib community~\cite{Mathlib}.
+
+\subsection{Mechanical checks}
+
+From the \leanmodule{lean/} directory, the decisive commands are:
+
+\begin{verbatim}
+lake build HGAS
+
+lake env lean -DwarningAsError=true \
+  HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean
+
+rg -n \
+  -e '^[[:space:]]*((private|protected)[[:space:]]+)?axiom[[:space:]]' \
+  -e '^[[:space:]]*((private|protected)[[:space:]]+)?unsafe[[:space:]]' \
+  -e '^[[:space:]]*(sorry|admit)\b' \
+  -e ':=[[:space:]]*(by[[:space:]]+)?(sorry|admit)\b' \
+  HGAS HGAS.lean
+\end{verbatim}
+
+The public/default \leanname{HGAS} target build completes successfully; the
+endpoint file also recompiles successfully with warnings treated as errors,
+and the strict token scan is empty.  Its transitive import closure contains
+783 of the 824 modules under \leanmodule{HGAS/}.  All 41 modules outside
+that closure were also elaborated directly with
+\texttt{-DwarningAsError=true}; all succeeded.  Their exact list and
+legacy/audit status are recorded in \leanmodule{LEGACY_MODULES.md}.
+Independent audit reports are stored under \leanmodule{../audits/} from
+this working directory.  They separately check the MRDP chain, theta
+identities, clock normalization, quotient/horocycle arguments, selected
+phase factorization, compact accumulator, wrapper, cubic lift, augmented
+fixed resources, and the repaired endpoint.
+
+\subsection{Why classical choice does not spoil the reduction}
+
+The fixed MRDP polynomial and some analytic witnesses, including the
+geometry-only cubic gain multiplier for each fixed \((n,k)\), are obtained
+by classical choice.  This is compatible with a fixed-parameter computable
+many-one reduction because each chosen finite object is thereafter a
+constant.  A program may contain any fixed finite lookup table.  This does
+not assert a uniform extractor for those constants as the parameters vary.
+More importantly, the final
+family structure does not derive its output code by inspecting semantic
+proof objects: it stores a separate finite source-code function and a proof
+that this function is computable.  The equality with the semantic
+certificate is proved afterward.  This is the formal effectivity firewall
+described in Section~\ref{sec:fixed}.
+
+\subsection{Final logical compression}
+
+After all mathematics has been packaged, the endpoint proof is short:
+\[
+\begin{array}{rcl}
+\mathrm{Predicate}(t)
+ &\Longleftrightarrow&
+ \widetilde I_t\text{ solvable}\\
+ &\Longleftrightarrow&
+ \mathcal M(\mathcal R_t)<0\\
+ &\Longleftrightarrow&
+ \mathrm{outputCode}(t)\in
+       \HGAS_{\Q}(n_\ast,d_\ast).
+\end{array}
+\tag{16.2}
+\]
+The first equivalence is arithmetic and augmentation; the second is the
+two-field semantic gap; the third is the homogeneous wrapper.  Computability
+of \(\mathrm{outputCode}\) makes (16.2) a many-one reduction.  Combining it
+with the c.e. upper bound proves fixed-pair \(\Sigma^0_1\)-completeness;
+the effective Veronese and padding maps give the cofinal theorem.
+
+\section{Conclusion}
+
+For rational homogeneous polynomial vector fields, the general GAS
+decision problem is not merely difficult: it is undecidable already at one
+fixed dimension and one fixed odd degree.  Positive instances remain
+computably enumerable through exact rational Lyapunov certificates, so the
+fixed language is precisely \(\Sigma^0_1\)-complete.  A stabilized
+Veronese lift lowers the degree to three at the cost of a fixed increase in
+dimension, and padding propagates the result to every sufficiently large
+fixed dimension and every odd degree at least three.
+
+The proof's delicate point is also its most instructive correction.  Three
+moments do not determine a quadratic theta trace when the linear/private
+frequency ratio is zero.  A tiny arithmetic preprocessing step,
+\(x_j-y_j=0\), both preserves solvability and makes the ratio irrational
+through prime-radical character independence.  The repaired theorem is
+therefore stronger logically and cleaner modularly: every final universal
+instance passes through one uniform, reusable irrational-ratio selector.
+
+The low-dimensional cubic case \((n,d)=(3,3)\) remains open in this
+development.  Settling it would be a separate result rather than a missing
+step in the theorem proved here.
+
+\begin{thebibliography}{99}
+\small
+\setlength{\itemsep}{1pt}
+
+\bibitem{Ahmadi2012}
+A.~A. Ahmadi,
+\newblock On the difficulty of deciding asymptotic stability of cubic
+homogeneous vector fields,
+\newblock in \emph{Proceedings of the 2012 American Control Conference},
+2012, pp.~3334--3339,
+\newblock \href{https://doi.org/10.1109/ACC.2012.6315687}
+{doi:10.1109/ACC.2012.6315687};
+\href{https://arxiv.org/abs/1112.0741}{arXiv:1112.0741}.
+
+\bibitem{AhmadiElKhadir2020}
+A.~A. Ahmadi and B. El Khadir,
+\newblock On algebraic proofs of stability for homogeneous vector fields,
+\newblock \emph{IEEE Transactions on Automatic Control} 65 (2020), no.~1,
+325--332,
+\newblock \href{https://doi.org/10.1109/TAC.2019.2914968}
+{doi:10.1109/TAC.2019.2914968};
+\href{https://arxiv.org/abs/1803.01877}{arXiv:1803.01877}.
+
+\bibitem{AhmadiParrilo2017}
+A.~A. Ahmadi and P.~A. Parrilo,
+\newblock Sum of squares certificates for stability of planar,
+homogeneous, and switched systems,
+\newblock \emph{IEEE Transactions on Automatic Control} 62 (2017), no.~10,
+5269--5274,
+\newblock \href{https://doi.org/10.1109/TAC.2016.2647253}
+{doi:10.1109/TAC.2016.2647253}.
+
+\bibitem{Brezhnev2013}
+Y.~V. Brezhnev,
+\newblock Non-canonical extension of theta-functions and modular
+integrability of theta-constants,
+\newblock \emph{Proceedings of the Royal Society of Edinburgh Section A:
+Mathematics} 143 (2013), no.~4, 689--738,
+\newblock \href{https://doi.org/10.1017/S0308210512001023}
+{doi:10.1017/S0308210512001023};
+\href{https://arxiv.org/abs/1011.1643}{arXiv:1011.1643}.
+
+\bibitem{BrezhnevLyakhovichSharapov2011}
+Y.~V. Brezhnev, S.~L. Lyakhovich, and A.~A. Sharapov,
+\newblock Dynamical systems defining Jacobi's theta-constants,
+\newblock \emph{Journal of Mathematical Physics} 52 (2011), no.~11,
+112704,
+\newblock \href{https://doi.org/10.1063/1.3662961}
+{doi:10.1063/1.3662961};
+\href{https://arxiv.org/abs/1012.1429}{arXiv:1012.1429}.
+
+\bibitem{BuserScarpellini2007}
+P. Buser and B. Scarpellini,
+\newblock Undecidable propositions by ODE's,
+\newblock \emph{Annales Academiae Scientiarum Fennicae Mathematica}
+32 (2007), 317--340,
+\newblock
+\href{https://www.acadsci.fi/mathematica/Vol32/vol32pp317-340.pdf}
+{journal PDF}.
+
+\bibitem{Chandrasekharan1985}
+K. Chandrasekharan,
+\newblock \emph{Elliptic Functions},
+\newblock Grundlehren der mathematischen Wissenschaften 281,
+Springer, Berlin, 1985,
+\newblock \href{https://doi.org/10.1007/978-3-642-52244-4}
+{doi:10.1007/978-3-642-52244-4}.
+
+\bibitem{Dani1978}
+S.~G. Dani,
+\newblock Invariant measures of horospherical flows on noncompact
+homogeneous spaces,
+\newblock \emph{Inventiones Mathematicae} 47 (1978), no.~2, 101--138,
+\newblock \href{https://doi.org/10.1007/BF01578067}
+{doi:10.1007/BF01578067}.
+
+\bibitem{DaniSmillie1984}
+S.~G. Dani and J. Smillie,
+\newblock Uniform distribution of horocycle orbits for Fuchsian groups,
+\newblock \emph{Duke Mathematical Journal} 51 (1984), no.~1, 185--194,
+\newblock \href{https://doi.org/10.1215/S0012-7094-84-05110-X}
+{doi:10.1215/S0012-7094-84-05110-X}.
+
+\bibitem{DavisPutnamRobinson1961}
+M. Davis, H. Putnam, and J. Robinson,
+\newblock The decision problem for exponential Diophantine equations,
+\newblock \emph{Annals of Mathematics}, Second Series, 74 (1961), no.~3,
+425--436,
+\newblock \href{https://doi.org/10.2307/1970289}
+{doi:10.2307/1970289}.
+
+\bibitem{DLMF}
+F.~W.~J. Olver, A.~B. Olde Daalhuis, D.~W. Lozier, B.~I. Schneider,
+R.~F. Boisvert, C.~W. Clark, B.~R. Miller, B.~V. Saunders, H.~S. Cohl,
+and M.~A. McClain (eds.),
+\newblock \emph{NIST Digital Library of Mathematical Functions},
+\newblock version 1.2.7, released 15 June 2026,
+\url{https://dlmf.nist.gov/}; especially Chapters 20 and 23.
+
+\bibitem{GracaCampagnoloBuescu2008}
+D.~S. Gra\c ca, M.~L. Campagnolo, and J. Buescu,
+\newblock Computability with polynomial differential equations,
+\newblock \emph{Advances in Applied Mathematics} 40 (2008), no.~3,
+330--349,
+\newblock \href{https://doi.org/10.1016/j.aam.2007.02.003}
+{doi:10.1016/j.aam.2007.02.003}.
+
+\bibitem{HubbardMiller2010}
+J.~H. Hubbard and R.~L. Miller,
+\newblock Equidistribution of horocyclic flows on complete hyperbolic
+surfaces of finite area,
+\newblock in \emph{In the Tradition of Ahlfors--Bers, V},
+Contemporary Mathematics 510, American Mathematical Society, 2010,
+pp.~129--150,
+\newblock \href{https://doi.org/10.1090/conm/510/10022}
+{doi:10.1090/conm/510/10022};
+\href{https://arxiv.org/abs/0712.1300}{arXiv:0712.1300}.
+
+\bibitem{Lean4}
+L. de Moura and S. Ullrich,
+\newblock The Lean 4 theorem prover and programming language,
+\newblock in \emph{Automated Deduction---CADE 28}, Lecture Notes in
+Computer Science 12699, Springer, 2021, pp.~625--635,
+\newblock \href{https://doi.org/10.1007/978-3-030-79876-5_37}
+{doi:10.1007/978-3-030-79876-5\_37}.
+
+\bibitem{Lagrange1770}
+J.-L. Lagrange,
+\newblock D\'emonstration d'un th\'eor\`eme d'arithm\'etique,
+\newblock \emph{Nouveaux M\'emoires de l'Acad\'emie Royale des Sciences et
+Belles-Lettres de Berlin}, volume for 1770 (printed 1772), 123--133.
+
+\bibitem{Matiyasevich1970}
+Y.~V. Matiyasevich,
+\newblock Enumerable sets are Diophantine,
+\newblock \emph{Soviet Mathematics Doklady} 11 (1970), no.~2, 354--357;
+English translation of \emph{Doklady Akademii Nauk SSSR} 191 (1970),
+no.~2, 279--282.
+
+\bibitem{Matiyasevich1971}
+Y.~V. Matiyasevich,
+\newblock Diophantine representation of enumerable predicates,
+\newblock \emph{Mathematics of the USSR-Izvestiya} 5 (1971), no.~1,
+1--28,
+\newblock \href{https://doi.org/10.1070/IM1971v005n01ABEH001004}
+{doi:10.1070/IM1971v005n01ABEH001004}.
+
+\bibitem{Matiyasevich1993}
+Y.~V. Matiyasevich,
+\newblock \emph{Hilbert's Tenth Problem},
+\newblock Foundations of Computing, MIT Press, Cambridge, MA, 1993.
+
+\bibitem{Mathlib}
+The Mathlib Community,
+\newblock The Lean mathematical library,
+\newblock in \emph{Proceedings of the 9th ACM SIGPLAN International
+Conference on Certified Programs and Proofs (CPP 2020)}, 367--381,
+\newblock \href{https://doi.org/10.1145/3372885.3373824}
+{doi:10.1145/3372885.3373824};
+\href{https://arxiv.org/abs/1910.09336}{arXiv:1910.09336}.
+
+\bibitem{Mumford1983}
+D. Mumford,
+\newblock \emph{Tata Lectures on Theta I},
+\newblock Progress in Mathematics 28, Birkh\"auser, Boston, 1983,
+\newblock \href{https://doi.org/10.1007/978-1-4899-2843-6}
+{doi:10.1007/978-1-4899-2843-6}.
+
+\bibitem{Rosier1992}
+L. Rosier,
+\newblock Homogeneous Lyapunov function for homogeneous continuous vector
+field,
+\newblock \emph{Systems \& Control Letters} 19 (1992), no.~6, 467--473,
+\newblock \href{https://doi.org/10.1016/0167-6911(92)90078-7}
+{doi:10.1016/0167-6911(92)90078-7}.
+
+\bibitem{Samardzija1983}
+N. Samard{\v z}ija,
+\newblock Stability properties of autonomous homogeneous polynomial
+differential systems,
+\newblock \emph{Journal of Differential Equations} 48 (1983), no.~1,
+60--70,
+\newblock \href{https://doi.org/10.1016/0022-0396(83)90059-1}
+{doi:10.1016/0022-0396(83)90059-1}.
+
+\end{thebibliography}
+
+\end{document}
