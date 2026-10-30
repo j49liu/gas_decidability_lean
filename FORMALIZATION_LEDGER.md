@@ -1,11 +1,35 @@
 # Formalization ledger
 
-Current status: **the unconditional augmented fixed-pair theorem and its
-cofinal cubic consequence are complete and kernel checked**.
+Last updated: 2026-10-08
+
+Current status: **the unconditional augmented fixed-pair GAS theorem, its
+cofinal cubic consequence, and the fixed-parameter GAS/HLS cubicization
+theorems are complete and kernel checked**. The cofinal HLS hardness and
+undecidability endpoints are conditional transfer theorems: their external
+source result remains an explicit hypothesis.
 
 This ledger records the public theorem chain in the current worktree.  It
 supersedes the early-development checklist that described the
 modular/Jacobi-to-compiler integration as open.
+
+This ledger uses four status labels:
+
+- **Exact**: the Lean declaration has the intended coded input language,
+  hypotheses, and conclusion.
+- **Equivalent or alternative**: Lean proves a result sufficient for the
+  dependency chain through a norm-equivalent, representation-equivalent, or
+  different fixed-resource formulation.
+- **Conditional**: the declaration exposes an unformalized literature input
+  as a hypothesis.
+- **Not formalized**: the repository makes no claim that Lean verifies the
+  stated result.
+
+The preserved GAS companion is
+`docs/hgas_sigma1_complete_formalization_companion.tex`. It records the
+preceding 824-module formalization. The additive HLS and shadowing extension
+is documented in `docs/cubicization_hls_formalization_companion.tex`. This
+ledger, rather than either companion alone, is the authoritative coverage
+record for the combined 837-module repository.
 
 The mathematical language is
 
@@ -16,6 +40,15 @@ HGASQ n d : PolynomialFieldCode n → Prop
 from `HGAS/Computability/HGASLanguage.lean`.  Its inputs are finite rational
 codes for polynomial vector fields on `ℝⁿ`, and syntactic homogeneity of
 the requested degree is part of the language definition.
+
+The corresponding homogeneous Lyapunov-stability language is
+
+```lean
+HLSQ n d : PolynomialFieldCode n → Prop
+```
+
+from `HGAS/Stability/KordaLyapunov.lean`. Invalid homogeneity codes are
+negative instances for both languages.
 
 ## Headline theorems
 
@@ -88,6 +121,59 @@ These are unconditional Lean theorems: the endpoint takes no unproved
 classification proposition, compiler certificate, or semantic gap as a
 hypothesis.
 
+## HLS and common cubicization theorems
+
+The additive endpoint is
+`HGAS/Propagation/CofinalLyapunovReduction.lean`, supported by the new
+stability, Veronese, and computability modules listed below. For fixed
+`n >= 2` and `k >= 1`, it proves:
+
+```lean
+hlsQ_manyOneReducible_cubic :
+  HLSQ n (2 * k + 1) ≤₀
+    HLSQ (cubicLiftCodeDimension n k) 3
+
+exists_computable_cubicization :
+  ∃ f, Computable f ∧
+    ∀ F,
+      (HGASQ n (2 * k + 1) F ↔
+        HGASQ (cubicLiftCodeDimension n k) 3 (f F)) ∧
+      (HLSQ n (2 * k + 1) F ↔
+        HLSQ (cubicLiftCodeDimension n k) 3 (f F))
+```
+
+Thus one fixed-parameter code map preserves both properties. The theorem
+`hlsQ_manyOneReducible_cofinalFixedPair` composes this map with dimension
+and odd-degree padding to obtain
+
+```lean
+HLSQ n (2 * k + 1) ≤₀ HLSQ N d
+```
+
+whenever `cubicLiftCodeDimension n k <= N`, `Odd d`, and `3 <= d`.
+
+The semantic core is unconditional. In particular, the extension proves
+
+```lean
+sourceLS_iff_stabilizedCubicLS
+```
+
+for every homogeneous source field of degree `2*k+1` with `k >= 1`. The
+raw-code compiler's additional `n >= 2` hypothesis is needed only for its
+explicit malformed-code fallback.
+
+The exported cofinal HLS consequences have two deliberately separate
+forms:
+
+- `hlsQ_manyOneHard_cofinal_of_source` transfers `ManyOneHard` from a fixed
+  source language and derives target hardness, undecidability, and a
+  non-c.e. complement; and
+- `hlsQ_not_computable_cofinal_of_source` transfers noncomputability alone.
+
+Both theorems are **conditional**. Korda's source theorem is represented by
+the explicit hypothesis `hsource`; the repository does not formalize his
+register-machine reduction.
+
 ## What is not claimed
 
 The present result does **not** settle `HGASQ 3 3`.
@@ -110,6 +196,25 @@ completed cofinal theorem.
 The word “cofinal” is important: the cubic result applies to every
 *sufficiently large* fixed dimension, not to every positive dimension.
 
+The repository also does not claim:
+
+- a common raw-code GAS/HLS compiler in source dimension `n = 1`;
+- one cubic compiler computable uniformly while `(n,k)` varies;
+- an evaluable numerical value for the chosen shadow gain or cofinal
+  threshold;
+- a maximal-solution API theorem equating the paper's wording with Lean's
+  global-forward-trajectory representation;
+- a verbatim `Q`-norm version of the printed finite-horizon shadowing
+  proposition;
+- an unconditional Lean proof of Korda's source hardness theorem; or
+- formalizations of the manuscript's variable-resource corollary, normal
+  forms (iii) and (iv), the even-degree and linear-field lemmas, or the
+  Korda GAS/forward-completeness corollary.
+
+The GAS-only cubic compiler covers every positive source dimension. The
+semantic HLS preservation theorem also has no `n >= 2` restriction; only
+the bundled raw-code theorem has that restriction.
+
 ## Trust and build status
 
 The project is pinned to Lean/Mathlib 4.30.0 and uses:
@@ -125,7 +230,8 @@ lake build
 ```
 
 It currently succeeds, including the root `HGAS.lean` import and the
-completed endpoint.
+completed endpoints. The source tree has 837 modules: 796 in the public
+closure and 41 independently elaborated modules outside it.
 
 The source audit
 
@@ -150,6 +256,16 @@ NormalizedCorrectedAugmentedEffectiveFamily.cofinal_sigmaOneComplete
 NormalizedCorrectedAugmentedEffectiveFamily.cubic_sigmaOneComplete
 NormalizedCorrectedAugmentedEffectiveFamily.cubic_not_computable
 NormalizedCorrectedAugmentedEffectiveFamily.cubic_complement_not_re
+HGAS.lyapunovStableWithExistence_iff_uniformLinearTrajectoryBound
+HGAS.lyapunovStableWithExistence_iff_boundedEuclideanAngularCocycle
+HGAS.Veronese.exists_finiteHorizonOrbitShadowing
+HGAS.Veronese.exists_finiteHorizonShadowing
+HGAS.Veronese.sourceLS_iff_stabilizedCubicLS
+HGAS.Veronese.effectiveCubicLSReductionCode_hgasQ_iff
+HGAS.Propagation.effectiveCubicLSReductionCode_hlsQ_iff
+HGAS.Propagation.exists_computable_cubicization
+HGAS.Propagation.hlsQ_manyOneHard_cofinal_of_source
+HGAS.Propagation.hlsQ_not_computable_cofinal_of_source
 ```
 
 report only:
@@ -161,8 +277,9 @@ Quot.sound
 ```
 
 These are the ordinary Lean/Mathlib logical foundations used by the
-development.  No project-defined axiom appears in the dependency closure
-of the headline result.
+development. No project-defined axiom appears in the dependency closure of
+the headline GAS or HLS results. The occurrence of `Classical.choice`
+records nonconstructive existence choices; it is not a project axiom.
 
 ## Fixed constants and the meaning of computability
 
@@ -199,10 +316,18 @@ depends on noncomputable constants.  No numerical value for
 This extraction caveat does not weaken the proved `Computable` maps or the
 many-one reductions.
 
+The shadow-gain compiler has a parallel fixed-parameter qualification. For
+each fixed `(n,k)`, `fixedCubicShadowGainParameters` selects a natural gain
+by classical choice, and `effectiveCubicLSReductionCode_primrec` proves that
+the resulting map is primitive recursive in the input field code. Lean
+therefore proves existence of a computable reduction for each fixed pair.
+It does not provide one algorithm uniform in varying `(n,k)`, and the
+selected gain need not reduce to a printed numeral.
+
 ## End-to-end theorem/module crosswalk
 
-Every row below is complete (`[x]`) on the dependency path of the headline
-theorem.
+Every row in the first table is complete (`[x]`) on the dependency path of
+the headline GAS theorem.
 
 | Stage | Principal declaration | Module | Status |
 |---|---|---|---|
@@ -234,6 +359,55 @@ theorem.
 | Final cofinal odd-degree theorem | `NormalizedCorrectedAugmentedEffectiveFamily.cofinal_sigmaOneComplete` | `HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean` | `[x]` |
 | Final sufficiently-large-dimension cubic theorem | `NormalizedCorrectedAugmentedEffectiveFamily.cubic_sigmaOneComplete` | `HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean` | `[x]` |
 | Cofinal cubic complement is not c.e. | `NormalizedCorrectedAugmentedEffectiveFamily.cubic_complement_not_re` | `HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean` | `[x]` |
+
+The HLS extension is a strict additive layer. All 13 modules in the next
+table lie in the public import closure; every preceding `HGAS/` module is
+unchanged.
+
+| Stage | Principal declaration or role | Module | Status |
+|---|---|---|---|
+| Nonvacuous HLS predicate and code language | `LyapunovStableWithExistence`, `HLSQ` | `HGAS/Stability/KordaLyapunov.lean` | `[x]` |
+| Uniform linear bound | `lyapunovStableWithExistence_iff_uniformLinearTrajectoryBound` | `HGAS/Stability/KordaLyapunov.lean` | `[x]` |
+| Euclidean angular criterion | `lyapunovStableWithExistence_iff_boundedEuclideanAngularCocycle` | `HGAS/Stability/AngularLyapunov.lean` | `[x]` |
+| Angular-field congruence | `lyapunovStableWithExistence_iff_of_eqOn_sphere` | `HGAS/Stability/AngularCongruence.lean` | `[x]` |
+| Linear conjugacy | `lyapunovStableWithExistence_conjugateField_iff` | `HGAS/Stability/LinearConjugacyLyapunov.lean` | `[x]` |
+| HLS product, dimension, and degree padding | `degreeDimensionPadCode_hlsQ_iff_of_homogeneous` | `HGAS/Stability/PaddingLyapunov.lean` | `[x]` |
+| Source and weighted angular criteria | `lyapunovStableWithExistence_iff_boundedWeightedAngularCocycle` | `HGAS/Veronese/LyapunovAngularCriteria.lean` | `[x]` |
+| Distance to the Veronese cone | `exists_coneDistanceSq_le_energy` | `HGAS/Veronese/ConeDistance.lean` | `[x]` |
+| Decay and Lipschitz preliminaries | shadowing estimates and cone invariance | `HGAS/Veronese/ShadowingPrelims.lean` | `[x]` |
+| Shadowing parameter package | `CubicLiftShadowingBounds` | `HGAS/Veronese/CubicLiftShadowingBounds.lean` | `[x]` |
+| Finite-horizon shadowing and semantic HLS preservation | `exists_finiteHorizonOrbitShadowing`, `exists_finiteHorizonShadowing`, `sourceLS_iff_stabilizedCubicLS` | `HGAS/Veronese/CubicLiftLyapunovConjugacy.lean` | `[x]` |
+| Generic hardness transfers | `ManyOneHard` and its consequences | `HGAS/Computability/ManyOneHard.lean` | `[x]` |
+| Fixed-parameter effective gain and common compiler | `effectiveCubicLSReductionCode_primrec`, code-level GAS/HLS correctness | `HGAS/Computability/CubicLiftEffectiveShadowGain.lean` | `[x]` |
+| Cubic/cofinal HLS reductions | `exists_computable_cubicization`, `hlsQ_manyOneReducible_cofinalFixedPair` | `HGAS/Propagation/CofinalLyapunovReduction.lean` | `[x]` |
+
+## Paper-to-Lean scope matrix
+
+This table records what the repository verifies literally. It avoids the
+stronger and inaccurate claim that every printed intermediate lemma is
+formalized verbatim.
+
+| Manuscript result or ingredient | Status | Qualification |
+|---|---|---|
+| Main cofinal and fixed-pair GAS theorems | **Exact** | Unconditional statements about raw rational field codes |
+| Cubic GAS consequence | **Exact** | Every dimension beyond the symbolic fixed threshold |
+| GAS angular criterion | **Exact for the Euclidean form** | Negativity of the maximal invariant angular average on the Euclidean unit sphere |
+| Odd-degree c.e. upper bound | **Exact statement; alternative proof** | The printed endpoint is proved through finite-grid certificates rather than Tarski elimination |
+| Required MRDP input | **Equivalent or alternative** | The universal-halting case needed by the reduction, not the printed arbitrary-r.e.-set theorem verbatim |
+| Fixed-resource DQL construction | **Equivalent or alternative** | Exact fixed arities and semantics, but not the paper's affine-right-hand-side form verbatim |
+| Korda scaling lemma for HLS | **Equivalent or alternative** | Uses the repository's global-forward-trajectory representation |
+| Korda angular HLS criterion | **Equivalent or alternative** | Uses a bounded-cocycle witness rather than the paper's named optimum |
+| GAS cubicization | **Exact** | Code reduction for positive source dimension; fixed-parameter computability |
+| Common GAS/HLS cubicization | **Exact** | One raw-code compiler for `n >= 2`, `k >= 1`; fixed-parameter computability |
+| Finite-horizon shadowing | **Equivalent or alternative** | Split orbit/cocycle statements in a norm equivalent to the paper's `Q`-norm formulation |
+| GAS and HLS degree/dimension padding | **Exact** | Exact code-level equivalences under their stated homogeneity hypotheses |
+| HLS cofinal fixed-pair transfer | **Exact** | Source dimension at least two for the raw-code compiler |
+| Korda HLS hardness and undecidability consequences | **Conditional** | Korda's source theorem is the explicit `hsource` hypothesis |
+| Theta, selector, drift, compactification, and wrapper chain | **Equivalent or alternative** | Distributed formal analogues sufficient for the GAS endpoint |
+| Compiler uniformity in varying `(n,k)` | **Not formalized** | The proved code maps are computable separately for fixed `(n,k)` |
+| Maximal-solution/global-trajectory bridge | **Not formalized** | Polynomial regularity and uniqueness support the representation, but no standalone API theorem is exported |
+| Variable-resource corollary and normal forms (iii),(iv) | **Not formalized** | No Lean coverage claimed |
+| Even-degree, linear-field, and Korda GAS/forward-completeness results | **Not formalized** | No Lean coverage claimed |
 
 ## Mathematical dependency chain
 
@@ -365,6 +539,50 @@ They preserve GAS exactly, preserve finite-code computability, and turn the
 one fixed-pair reduction into `cofinal_sigmaOneComplete`.  Specializing the
 target degree to `3` gives `cubic_sigmaOneComplete`.
 
+### 7. Homogeneous Lyapunov stability and shadowing
+
+`HGAS/Stability/KordaLyapunov.lean` prevents the trajectory-only stability
+predicate from becoming vacuous when solutions blow up. Its
+`LyapunovStableWithExistence` predicate requires existence of a global
+forward trajectory from every sufficiently small initial state and bounds
+every global forward trajectory from that state. Homogeneous scaling gives
+`lyapunovStableWithExistence_iff_uniformLinearTrajectoryBound`.
+
+`HGAS/Stability/AngularLyapunov.lean` converts this linear trajectory bound
+to boundedness of the Euclidean angular radial cocycle. The Veronese layer
+transfers that criterion to the source and weighted target geometries.
+
+The stabilized cubic field contracts the toric penalty away from the
+Veronese cone. `exists_finiteHorizonOrbitShadowing` compares each finite
+target orbit segment with an orbit on the invariant cone, and
+`exists_finiteHorizonShadowing` derives the corresponding radial-cocycle
+bound. Together with exact conjugacy on the cone, these estimates prove
+`sourceLS_iff_stabilizedCubicLS`.
+
+The exported finite-horizon results are a split, norm-equivalent formal
+analogue of the manuscript's one displayed `Q`-norm proposition. They are
+the actual results used by the Lean proof; this ledger does not claim that
+the printed proposition is exported verbatim.
+
+### 8. Effective common compiler and conditional HLS transfer
+
+`HGAS/Computability/CubicLiftEffectiveShadowGain.lean` selects a sufficient
+shadow gain for each fixed `(n,k)` and proves the resulting field-code map
+primitive recursive in the input code. Valid codes use the stabilized
+cubic lift. Invalid codes map to an explicit unstable homogeneous cubic
+field, making the compiler total and preserving negative instances.
+
+`HGAS/Propagation/CofinalLyapunovReduction.lean` instantiates the semantic
+theorem rather than assuming it. The resulting
+`exists_computable_cubicization` declaration uses the same map for GAS and
+HLS. HLS padding then yields the exact cofinal fixed-pair reduction.
+
+The last step separates formal and external evidence. The generic
+`ManyOneHard` lemmas are proved in Lean, but Korda's source hardness theorem
+is not. Consequently, the final HLS propagation theorems take that source
+claim as `hsource`. No unconditional HLS classification is inferred inside
+Lean without this hypothesis.
+
 ## Historical interfaces retained in the tree
 
 The development deliberately retains several structures and conditional
@@ -387,6 +605,11 @@ The old interfaces remain useful abstractions and alternate proof routes;
 their continued presence must not be read as an open hypothesis of the
 completed augmented endpoint.
 
+The source history is similarly explicit. The HLS release retains all 824
+preceding `HGAS/` modules byte for byte and adds 13 public-closure modules.
+The original GAS companion is preserved rather than silently rewritten; the
+new companion documents the additive layer.
+
 ## Reproducibility checklist
 
 From the `lean/` directory:
@@ -397,20 +620,28 @@ lake build
 
 # Narrow endpoint build
 lake build HGAS.Arithmetic.NormalizedCorrectedAugmentedEffectiveFamily
+lake build HGAS.Propagation.CofinalLyapunovReduction
+
+# Import-closure and legacy-catalog check
+python3 scripts/check_import_closure.py
 
 # Placeholder/project-axiom scan
 rg -n '(^|[^A-Za-z])(sorry|admit)\b|^\s*axiom\b|^\s*unsafe\b' \
   HGAS HGAS.lean --glob '*.lean'
 ```
 
-For trust auditing, import
-`HGAS.Arithmetic.NormalizedCorrectedAugmentedEffectiveFamily` in a temporary
-Lean file and run `#print axioms` on the seven headline declarations listed
-under “Trust and build status”.
+For trust auditing, run
 
-Independent audit notes are kept under `../audits/`, including:
+```bash
+lake env lean -DwarningAsError=true scripts/ReleaseAxiomAudit.lean
+```
 
-- `lean_augmented_fixed_resource_audit_2026-07-24.md`;
-- the endpoint audits for the normalized-corrected family; and
-- the module-specific analytic, arithmetic, compiler, and wrapper audits
-  accumulated during development.
+and inspect every `#print axioms` result. The expected dependency list for
+each audited endpoint is `[propext, Classical.choice, Quot.sound]`. This is
+an inspection audit: Lean checks that every named declaration elaborates,
+but the command does not itself reject an unexpected additional axiom.
+
+A release check should also elaborate each of the 41 paths in
+`LEGACY_MODULES.md` directly with `-DwarningAsError=true`. The closure script
+checks their exact catalog membership; direct elaboration checks that the
+files remain valid even though `HGAS.lean` does not import them.

@@ -1,67 +1,130 @@
-# Lean formalization of homogeneous-GAS completeness
+# Lean formalization of homogeneous stability and decidability
 
-This directory contains the completed formalization of the repaired
-homogeneous-GAS completeness proof.  The human-readable proof that follows
-the final Lean dependency chain is
-`docs/hgas_sigma1_complete_formalization_companion.tex`.  The research
-manuscript is maintained separately; this repository contains the complete
-Lean source, its pinned environment, and the formalization companion.  The
-final endpoint uses the nonzero-linear-column augmentation described in the
-companion.
+This repository is the canonical Lean source for two related developments:
 
-The formalization has two simultaneous goals:
+1. the unconditional fixed-pair and cofinal
+   `Σ⁰₁`-completeness theorems for homogeneous global asymptotic
+   stability (HGAS); and
+2. the additive formalization of homogeneous Lyapunov stability (HLS),
+   finite-horizon shadowing, and one fixed-parameter cubic compiler that
+   preserves both GAS and HLS.
 
-1. track the mathematical proof closely enough that a reader can move
-   between the paper and Lean declarations without reverse engineering the
-   code; and
-2. isolate reusable mathematics—homogeneous dynamics, invariant averages,
-   polynomial encodings, cocycle compactification, and Veronese lifts—from
-   the manuscript-specific reduction.
+The HLS development adds 13 modules without changing any of the 824 modules
+in the preceding GAS release. This layout preserves the earlier artifact
+while providing one current source tree and one public import root,
+`HGAS.lean`.
+
+The accompanying paper is
+[Global asymptotic stability of homogeneous polynomial vector fields is undecidable](https://arxiv.org/abs/2610.12434)
+by Ivan O. Shevchenko, Jun Liu, and Xinzhi Liu (arXiv:2610.12434).
+
+The formalization proves
+the headline coded-language endpoints and formal analogues sufficient for
+their Lean dependency chains. Some printed intermediate results are exposed
+in equivalent or alternative forms rather than copied verbatim.
+
+## Companion documents and coverage ledger
+
+The repository keeps two companions with distinct scopes:
+
+- `docs/hgas_sigma1_complete_formalization_companion.tex` is the preserved
+  companion to the original 824-module GAS formalization. Its rendered PDF
+  is `docs/hgas_sigma1_complete_formalization_companion.pdf`.
+- `docs/cubicization_hls_formalization_companion.tex` documents the 13-module
+  HLS and shadowing extension. Its rendered PDF is
+  `docs/cubicization_hls_formalization_companion.pdf`.
+
+`FORMALIZATION_LEDGER.md` is the authoritative current crosswalk. It labels
+paper-to-Lean correspondences as exact, equivalent or alternative,
+conditional, or not formalized. `LEGACY_MODULES.md` separately catalogs the
+41 source modules outside the public import closure.
 
 ## Build
 
 The project is pinned to Lean and Mathlib 4.30.0.
 
 ```bash
-lake update
 lake build HGAS
 ```
 
-During development, `lake env lean HGAS/Path/To/File.lean` checks one module.
-
-The repository intentionally excludes `.lake/`, compiled artifacts, and
-the exploratory `Scratch*.lean` files.  A fresh clone reconstructs all
+During development,
+`lake env lean -DwarningAsError=true HGAS/Path/To/File.lean` checks one
+module. The repository excludes `.lake/`, compiled artifacts, and
+exploratory `Scratch*.lean` files. A fresh clone reconstructs all
 dependencies from `lean-toolchain`, `lakefile.toml`, and
 `lake-manifest.json`.
 
-## Headline endpoint
+## Unconditional GAS endpoints
 
-The public root is `HGAS.lean`.  Its final theorem module is
-`HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean`.  The
-module proves:
+The final GAS theorem module is
+`HGAS/Arithmetic/NormalizedCorrectedAugmentedEffectiveFamily.lean`. It
+proves:
 
 - `fixedPair_sigmaOneComplete`: one fixed positive dimension and one fixed
   odd degree at least three already give a `SigmaOneComplete` rational HGAS
   language;
 - `cofinal_sigmaOneComplete`: every sufficiently large fixed dimension and
-  every fixed odd degree at least three give a `SigmaOneComplete` language;
-- `cubic_sigmaOneComplete`: in particular, cubic HGAS is
-  `SigmaOneComplete` in every sufficiently large fixed dimension; and
+  every fixed odd degree at least three give a `SigmaOneComplete` HGAS
+  language;
+- `cubic_sigmaOneComplete`: cubic HGAS is `SigmaOneComplete` in every
+  sufficiently large fixed dimension; and
 - the corresponding undecidability and non-c.e.-complement consequences.
 
-The development does not determine the separate low-dimensional language
-`HGASQ 3 3`.
+The fixed dimensions, degrees, and cofinal threshold are closed symbolic
+Lean terms. They ultimately use a finite Diophantine representation chosen
+by classical choice, so the development does not currently evaluate them
+to numerical literals. In particular, it does not determine the separate
+low-dimensional language `HGASQ 3 3`.
+
+## HLS and common cubicization endpoints
+
+`HGAS/Stability/KordaLyapunov.lean` defines
+`LyapunovStableWithExistence` and the rational code language `HLSQ`. This is
+the nonvacuous stability notion in which nearby initial states admit global
+forward trajectories and every such trajectory stays nearby. The extension
+then proves:
+
+- Korda's uniform-linear-trajectory-bound characterization in
+  `HGAS/Stability/KordaLyapunov.lean`;
+- the bounded-angular-cocycle criterion in
+  `HGAS/Stability/AngularLyapunov.lean`;
+- dimension and odd-degree padding for HLS in
+  `HGAS/Stability/PaddingLyapunov.lean`;
+- finite-horizon orbit and radial-cocycle shadowing and semantic HLS
+  preservation by the stabilized cubic Veronese lift in
+  `HGAS/Veronese/CubicLiftLyapunovConjugacy.lean`;
+- a primitive-recursive code compiler for each fixed pair `(n,k)` in
+  `HGAS/Computability/CubicLiftEffectiveShadowGain.lean`; and
+- exact cubic and cofinal fixed-pair HLS reductions in
+  `HGAS/Propagation/CofinalLyapunovReduction.lean`.
+
+For every fixed `n >= 2` and `k >= 1`, the declaration
+`exists_computable_cubicization` supplies one map that preserves both
+`HGASQ n (2*k+1)` and `HLSQ n (2*k+1)` under cubicization. The older
+GAS-only compiler covers positive source dimensions, including `n = 1`.
+The `n >= 2` hypothesis for the bundled raw-code compiler comes from its
+explicit two-coordinate unstable fallback for malformed inputs, not from
+the semantic HLS conjugacy theorem.
+
+The computability statement is fixed-parameter: Lean proves a computable
+input-code map separately for each fixed `(n,k)`. The chosen shadow gain is
+selected noncomputably once the pair is fixed. The repository does not
+claim one compiler computable uniformly in varying `(n,k)`, nor does it
+claim that the selected multiplier is currently evaluable.
+
+The cofinal HLS hardness and undecidability declarations are conditional
+transfer theorems. Korda's external source hardness or undecidability result
+appears as an explicit hypothesis named `hsource`; it is not formalized or
+introduced as a project axiom.
 
 ## Trust policy
 
-The finished theorem must not depend on project-defined `axiom`
-declarations, `sorry`, `admit`, or `unsafe` proof shortcuts. External
-published inputs used by the paper are formalization obligations, not
-permanent axioms. Temporary interfaces, if introduced while work is in
-progress, live in explicitly named staging modules and may not be imported
-by the final theorem.
+Public endpoints must not depend on project-defined `axiom` declarations,
+`sorry`, `admit`, `unsafe` proof shortcuts, or hidden substitutes for an
+external result. An external theorem not formalized in this repository must
+instead remain an explicit hypothesis of the exported conditional theorem.
 
-Run the placeholder audit with:
+Run the source audit with:
 
 ```bash
 rg -n \
@@ -72,13 +135,23 @@ rg -n \
   HGAS HGAS.lean
 ```
 
-The exact theorem-to-module ledger is maintained in
-`FORMALIZATION_LEDGER.md`.
+The audited headline endpoints report only `propext`, `Classical.choice`,
+and `Quot.sound` under `#print axioms`. The exact declarations and their
+scope are listed in `FORMALIZATION_LEDGER.md`.
+
+Reproduce the kernel-axiom inspection with:
+
+```bash
+lake env lean -DwarningAsError=true scripts/ReleaseAxiomAudit.lean
+```
+
+This command prints the dependencies for manual inspection; it does not
+automatically reject an unexpected additional axiom.
 
 ## Source coverage
 
-The directory `HGAS/` contains 824 Lean modules.  The transitive import
-closure of `HGAS.lean` contains 783 of them.  The remaining 41 historical,
+The directory `HGAS/` contains 837 Lean modules. The transitive import
+closure of `HGAS.lean` contains 796 of them. The remaining 41 historical,
 alternative, or audit modules are catalogued in `LEGACY_MODULES.md`; all 41
 also elaborate independently with warnings treated as errors.
 
@@ -91,8 +164,13 @@ python3 scripts/check_import_closure.py
 The expected result is:
 
 ```text
-HGAS source modules: 824
-Public import closure: 783
+HGAS source modules: 837
+Public import closure: 796
 Outside public closure: 41
 LEGACY_MODULES.md exact-set check: PASS
 ```
+
+## Copyright and license
+
+Copyright (c) 2026 Jun Liu and Ivan O. Shevchenko. This project is licensed
+under the Apache License, Version 2.0; see `LICENSE`.

@@ -1,12 +1,16 @@
 # Modules outside the public `HGAS` import closure
 
-Last verified: 2026-07-26
+Last verified: 2026-10-08
 
-The transitive import closure of `HGAS.lean` contains 783 of the 824
+The transitive import closure of `HGAS.lean` contains 796 of the 837
 modules under `HGAS/`. The 41 modules below are outside that closure.
 They are retained as historical alternatives, intermediate experiments,
 or audit/query modules; none is a dependency of the public theorem
 endpoint.
+
+The 13 modules added for Lyapunov stability, shadowing, and the common
+GAS/HLS cubic compiler all belong to the public closure. Consequently, the
+outside set below is unchanged from the preceding 824-module GAS release.
 
 Outside the public closure does **not** mean that a file fails to
 elaborate or that every declaration in it is false. All 41 files were
@@ -17,8 +21,8 @@ with:
 lake env lean -DwarningAsError=true <module>
 ```
 
-All 41 returned exit status zero. Together with the 783-module public
-closure, this gives direct verification coverage of all 824 source
+All 41 returned exit status zero. Together with the 796-module public
+closure, this gives direct verification coverage of all 837 source
 modules at this snapshot.
 
 The exact closure and catalog equality can be reproduced from the

@@ -475,12 +475,27 @@ import HGAS.Propagation.DegreePaddingCode
 import HGAS.Propagation.CofinalFixedPairReduction
 import HGAS.Propagation.CofinalSigmaOne
 import HGAS.Arithmetic.NormalizedCorrectedAugmentedEffectiveFamily
+import HGAS.Stability.KordaLyapunov
+import HGAS.Stability.AngularLyapunov
+import HGAS.Stability.AngularCongruence
+import HGAS.Stability.LinearConjugacyLyapunov
+import HGAS.Stability.PaddingLyapunov
+import HGAS.Veronese.LyapunovAngularCriteria
+import HGAS.Veronese.ConeDistance
+import HGAS.Veronese.ShadowingPrelims
+import HGAS.Veronese.CubicLiftShadowingBounds
+import HGAS.Veronese.CubicLiftLyapunovConjugacy
+import HGAS.Computability.ManyOneHard
+import HGAS.Computability.CubicLiftEffectiveShadowGain
+import HGAS.Propagation.CofinalLyapunovReduction
 
 /-!
-# Homogeneous global asymptotic stability
+# Homogeneous stability and decidability
 
-Root import for the formalization accompanying
-`homogeneous_gas_sigma1_comprehensive.tex`.
+Public import root for the fixed-pair and cofinal homogeneous-GAS
+formalization and its additive Lyapunov-stability and cubicization extension.
+The research manuscripts and their two formalization companions are maintained
+separately from this source root.
 
 Only completed, placeholder-free modules are imported here. Staging
 interfaces must never be imported by this file.

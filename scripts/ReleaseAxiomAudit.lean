@@ -1,0 +1,40 @@
+import HGAS
+
+-- Main homogeneous-GAS endpoints.
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.fixedPair_sigmaOneComplete
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.cofinal_sigmaOneComplete
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.cubic_sigmaOneComplete
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.fixedPair_not_computable
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.fixedPair_complement_not_re
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.cubic_not_computable
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.cubic_complement_not_re
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.gap
+#print axioms HGAS.NormalizedCorrectedAugmentedEffectiveFamily.family
+
+-- Arithmetic and semidecidability inputs to completeness.
+#print axioms HGAS.UniversalHalting.binaryPrimitiveRecursiveRelationsAreDiophantine
+#print axioms HGAS.hgasQ_re_of_oddDegree
+
+-- Lyapunov-stability mathematical endpoints.
+#print axioms HGAS.lyapunovStableWithExistence_iff_uniformLinearTrajectoryBound
+#print axioms HGAS.lyapunovStableWithExistence_iff_boundedEuclideanAngularCocycle
+#print axioms HGAS.DegreePaddingCode.degreeDimensionPadCode_hlsQ_iff_of_homogeneous
+#print axioms HGAS.Veronese.exists_finiteHorizonOrbitShadowing
+#print axioms HGAS.Veronese.exists_finiteHorizonShadowing
+#print axioms HGAS.Veronese.sourceLS_iff_stabilizedCubicLS
+
+-- Effective Lyapunov-stability compiler and transfer endpoints.
+#print axioms HGAS.Veronese.effectiveCubicLSReductionCode_primrec
+#print axioms HGAS.Propagation.effectiveCubicLSReductionCode_hlsQ_iff
+#print axioms HGAS.Propagation.hlsQ_manyOneReducible_cubic
+#print axioms HGAS.Propagation.exists_computable_cubicization
+#print axioms HGAS.Propagation.hlsQ_manyOneReducible_cofinalFixedPair
+#print axioms HGAS.Propagation.hlsQ_manyOneHard_cofinal_of_source
+#print axioms HGAS.Propagation.hlsQ_not_computable_cofinal_of_source
+
+-- GAS counterparts used by the same Part-I compiler.
+#print axioms HGAS.globallyAsymptoticallyStable_iff_maximalAngularAverage_neg
+#print axioms HGAS.Veronese.sourceGAS_iff_stabilizedCubicGAS
+#print axioms HGAS.Veronese.effectiveCubicLSReductionCode_hgasQ_iff
+#print axioms HGAS.Veronese.hgasQ_manyOneReducible_cubic_viaLS
+#print axioms HGAS.DegreePaddingCode.degreeDimensionPadCode_hgasQ_iff_of_homogeneous

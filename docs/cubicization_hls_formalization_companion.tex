@@ -1,0 +1,950 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1.02in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% Lean declarations contain long alphanumeric components.  Permit line
+% breaks inside those components when they are typeset with \path.
+\makeatletter
+\g@addto@macro\UrlBreaks{%
+  \do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m%
+  \do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z%
+  \do\A\do\B\do\C\do\D\do\E\do\F\do\G\do\H\do\I\do\J\do\K\do\L\do\M%
+  \do\N\do\O\do\P\do\Q\do\R\do\S\do\T\do\U\do\V\do\W\do\X\do\Y\do\Z}
+\makeatother
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=green!35!black,
+  urlcolor=blue!55!black
+}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\arraystretch}{1.16}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{warning}[theorem]{Warning}
+
+\newcommand{\R}{\mathbb R}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\N}{\mathbb N}
+\newcommand{\GAS}{\mathrm{GAS}}
+\newcommand{\HLS}{\mathrm{HLS}}
+\newcommand{\HGAS}{\mathrm{HGAS}}
+\newcommand{\RE}{\mathrm{RE}}
+\newcommand{\dd}{\,\mathrm d}
+\newcommand{\Lean}{\textnormal{\textsc{Lean}}}
+\newcommand{\Mathlib}{\textnormal{\textsc{Mathlib}}}
+\newcommand{\leanname}[1]{\path{#1}}
+\newcommand{\leanmodule}[1]{\path{#1}}
+\newcommand{\manyone}{\mathrel{\leq_{\mathrm m}}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\title{\textbf{Lyapunov Stability under Cubic Veronese Lifting}\\
+\large A mathematical guide to the Lean formalization of shadowing,
+effective cubicization, and fixed-resource transfer}
+\author{Formalization project companion}
+\date{8 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document explains the thirteen \Lean{} modules that extend the original
+formalization of fixed-resource homogeneous global asymptotic stability.
+The extension proves the Lyapunov-stability half of the cubic Veronese
+reduction.  For each fixed source dimension \(n\ge2\) and each fixed
+\(k\ge1\), one primitive-recursive map sends raw rational codes for
+degree-\(2k+1\) homogeneous fields to raw rational codes for cubic fields in
+dimension \(\binom{n+k-1}{k}\).  The same map preserves and reflects both
+global asymptotic stability and Lyapunov stability with forward existence.
+The development also proves the semantic shadowing theorem, degree and
+dimension padding, and transfer of Lyapunov-stability hardness to every
+larger fixed dimension and every odd degree at least three.
+
+The formal proof follows the mathematical argument through a bounded
+angular cocycle, exponential attraction to the Veronese cone, and
+finite-horizon backward shadowing.  It does not formalize Korda's
+undecidability constructions; their conclusions enter the final transfer
+theorems as explicit hypotheses.  It also does not formalize a compiler
+uniform in the varying pair \((n,k)\).  The orbit-shadowing declaration uses
+the coordinate sup norm, rather than stating verbatim the manuscript's
+weighted-\(Q\)-norm estimate; the two norms are equivalent in the fixed
+finite-dimensional space, and the formal estimate is the one used to prove
+the radial-cocycle bound.  These distinctions are part of the theorem
+statements below, not hidden implementation details.
+\end{abstract}
+
+\tableofcontents
+
+\section{Purpose, scope, and headline result}
+\label{sec:scope}
+
+The original companion
+\leanmodule{docs/hgas_sigma1_complete_formalization_companion.tex}
+documents the fixed-pair and cofinal \(\Sigma^0_1\)-completeness proof for
+homogeneous GAS.  The present document is a second historical artifact.  It
+covers the later Lyapunov-stability and shadowing extension without rewriting
+the earlier GAS account.  The extension adds thirteen modules; the preceding
+824 modules remain unchanged.
+
+The main formal statement concerns two languages of raw rational polynomial
+field codes.  The predicate \(\HGAS_{\Q}(n,d)\) requires a valid homogeneous
+degree-\(d\) code whose realized field has a globally asymptotically stable
+origin.  The predicate \(\HLS_{\Q}(n,d)\) requires the same syntactic validity
+and the trajectory-model counterpart of Korda's Lyapunov-stability notion:
+all sufficiently small initial conditions admit a solution for every forward
+time, and every such solution stays small.  For polynomial fields, standard
+local uniqueness identifies this notion mathematically with the usual
+maximal-solution formulation.  That bridge is not packaged as a separate
+Lean theorem.  Invalid homogeneity codes are negative instances of both
+languages.
+
+Put
+\[
+  m(n,k)=\#\{\alpha\in\N^n:|\alpha|=k\}
+        =\binom{n+k-1}{k}.
+\]
+The \Lean{} definition is
+\leanname{HGAS.Veronese.cubicLiftCodeDimension n k}.
+
+\begin{theorem}[The formalized fixed-parameter cubicization]
+\label{thm:headline}
+Fix \(n,k\in\N\) with \(n\ge2\) and \(k\ge1\).  There is a computable map
+\[
+  \mathcal C_{n,k}:
+  \operatorname{Code}(n)\longrightarrow\operatorname{Code}(m(n,k))
+\]
+such that every raw code \(F\) satisfies
+\begin{align*}
+ F\in\HGAS_{\Q}(n,2k+1)
+   &\Longleftrightarrow
+ \mathcal C_{n,k}(F)\in\HGAS_{\Q}(m(n,k),3),\\
+ F\in\HLS_{\Q}(n,2k+1)
+   &\Longleftrightarrow
+ \mathcal C_{n,k}(F)\in\HLS_{\Q}(m(n,k),3).
+\end{align*}
+The map \(\mathcal C_{n,k}\) is the same in the two equivalences.
+\end{theorem}
+
+The exact endpoint is
+\leanname{HGAS.Propagation.exists_computable_cubicization} in
+\leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}.  The explicit
+map is
+\leanname{HGAS.Veronese.effectiveCubicLSReductionCode}; its stronger
+implementation theorem proves primitive recursiveness, not merely
+computability.
+
+The hypothesis \(n\ge2\) belongs to the total raw-code theorem.  The semantic
+equivalence between a valid source field and its stabilized cubic lift has no
+such hypothesis.  The restriction appears because the malformed-input branch
+uses the two-coordinate unstable cubic field
+\[
+   \dot y_0=y_0y_1^2,\qquad \dot y_i=0\quad(i\ne0).
+\]
+Section~\ref{sec:codes} explains this point precisely.
+
+\begin{corollary}[Cofinal fixed-resource transfer]
+\label{cor:cofinal}
+Fix \(n_0\ge2\) and \(k_0\ge1\), and put \(m_0=m(n_0,k_0)\).  If
+\(\HLS_{\Q}(n_0,2k_0+1)\) is many-one hard, then
+\(\HLS_{\Q}(N,d)\) is many-one hard for every \(N\ge m_0\) and every odd
+\(d\ge3\).  Each target language is therefore undecidable and its complement
+is not recursively enumerable.  If only undecidability of the source is
+assumed, undecidability still transfers to every such target.
+\end{corollary}
+
+This corollary is unconditional as a transfer principle.  Its application to
+Korda's source family is conditional in \Lean{} because the external
+undecidability reduction of \cite{Korda2026} is not formalized.
+
+\section{The semantic language and the homogeneous scaling lemma}
+\label{sec:semantics}
+
+\subsection{Forward trajectories and Lyapunov stability}
+
+The basic dynamical object is a curve \(\gamma:\R\to E\) which starts at
+\(x_0\) and solves \(\dot\gamma=F(\gamma)\) on \([0,\infty)\).  It is represented
+by \leanname{HGAS.IsForwardTrajectory F gamma x0}.  Defining the curve on all
+of \(\R\) is a convenient ambient representation; only its restriction to
+nonnegative time is constrained.
+
+\begin{definition}[Lyapunov stability with forward existence]
+Let \(E\) be a real normed space.  The origin is Lyapunov stable with forward
+existence for \(F:E\to E\) if, for every \(\varepsilon>0\), there is
+\(\delta>0\) such that, whenever \(\norm{x_0}<\delta\),
+\begin{enumerate}
+\item at least one forward trajectory through \(x_0\) exists; and
+\item every forward trajectory through \(x_0\) satisfies
+      \(\norm{\gamma(t)}<\varepsilon\) for every \(t\ge0\).
+\end{enumerate}
+\end{definition}
+
+This is the literal definition
+\leanname{HGAS.LyapunovStableWithExistence}.  Quantifying over every forward
+trajectory prevents stability from depending on a choice of solution.  For
+the polynomial fields used here, local uniqueness also identifies it
+mathematically with the usual maximal-solution formulation; the development
+does not introduce a separate maximal-solution object.  The explicit
+existence clause is essential: a definition quantifying only over already
+global trajectories would hold vacuously near an initial point whose maximal
+trajectory blows up.
+
+The code language is
+\[
+\begin{split}
+  \HLS_{\Q}(n,d)(F)\quad\Longleftrightarrow\quad&
+  F\text{ decodes to a degree-\(d\) homogeneous field},\\
+  &\text{the realized field is Lyapunov stable with forward existence}.
+\end{split}
+\]
+It is \leanname{HGAS.HLSQ}.  Theorems
+\leanname{HGAS.hlsQ_iff_of_homogeneous} and
+\leanname{HGAS.hlsQ_of_hgasQ} expose, respectively, the semantics of valid
+codes and the implication \(\HGAS\Rightarrow\HLS\).
+
+\subsection{Stability becomes a global linear bound}
+
+Suppose that \(F\) is homogeneous of degree \(k+1\):
+\[
+      F(cx)=c^{k+1}F(x)\qquad(c\in\R,\ x\in E).
+\]
+Homogeneity rescales both the state and time.  If \(\gamma\) is a trajectory,
+then the appropriate state multiple of \(\gamma(c^k t)\) is another
+trajectory.  This observation turns a local stability radius into a global
+bound.
+
+\begin{theorem}[Homogeneous scaling criterion]
+\label{thm:scaling}
+For a degree-\(k+1\) homogeneous field \(F\), the origin is Lyapunov stable
+with forward existence if and only if there is \(C>0\) such that every
+\(x_0\in E\) admits a forward trajectory and every forward trajectory through
+\(x_0\) satisfies
+\[
+             \norm{\gamma(t)}\le C\norm{x_0}\qquad(t\ge0).
+\]
+\end{theorem}
+
+The predicate on the right is
+\leanname{HGAS.HasUniformLinearTrajectoryBound}; the equivalence is
+\leanname{HGAS.lyapunovStableWithExistence_iff_uniformLinearTrajectoryBound}.
+This is the formal analogue of Korda's Lemma~1.5
+\cite[Lemma~1.5]{Korda2026}.
+
+The nontrivial direction chooses a stability radius \(\delta\) for the unit
+target ball.  For \(x_0\ne0\), scale \(x_0\) by
+\(c=\delta/(2\norm{x_0})\), use stability at \(cx_0\), and scale the resulting
+trajectory back.  This gives \(C=2/\delta\).  The proof treats \(x_0=0\)
+separately and shows, from stability at every scale, that every trajectory
+from the origin remains at the origin.  The reverse implication uses
+\(\delta=\varepsilon/(2C)\).
+
+\section{The angular criterion for Lyapunov stability}
+\label{sec:angular}
+
+Let \(E\) now be finite-dimensional and Euclidean.  For \(u\) on the unit
+sphere define the radial rate and angular field
+\[
+  a_F(u)=\langle u,F(u)\rangle,
+  \qquad Y_F(u)=F(u)-a_F(u)u.
+\]
+The angular flow \(\phi_\tau(u)\) remains on the sphere.  Its logarithmic
+radial cocycle is
+\[
+  A_F(\tau,u)=\int_0^\tau a_F(\phi_s(u))\,\dd s.
+\]
+In the implementation, globally cut-off versions of the angular field give
+a total ambient flow; the cut-off equals one on the sphere, so the displayed
+objects have the intended values there.
+
+Define boundedness of the forward angular cocycle by
+\[
+   \exists M\in\R\ \forall \norm{u}=1\ \forall\tau\ge0,
+        \quad A_F(\tau,u)\le M.
+\]
+This is \leanname{HGAS.HasBoundedEuclideanAngularCocycle}.
+
+\begin{theorem}[Angular Lyapunov criterion]
+\label{thm:angular}
+Let \(F:E\to E\) be \(C^1\), homogeneous of degree \(k+1\), and satisfy
+\(F(0)=0\).  Then the origin is Lyapunov stable with forward existence if
+and only if the forward angular cocycle is bounded uniformly over the unit
+sphere.
+\end{theorem}
+
+The exact declaration is
+\leanname{HGAS.lyapunovStableWithExistence_iff_boundedEuclideanAngularCocycle}.
+It formalizes the Euclidean content of Korda's Lemma~2.2
+\cite[Lemma~2.2]{Korda2026}.
+
+The proof records the physical-time change rather than treating it as an
+informal polar-coordinate calculation.  The angular reconstruction is
+\[
+       \rho(\tau)=e^{A_F(\tau,u)}\phi_\tau(u),
+\]
+and the physical clock has positive speed \(e^{-kA_F(\tau,u)}\).  The theorem
+\leanname{HGAS.reconstruction_eq_forwardTrajectory} proves that any forward
+trajectory from a unit vector, sampled at this clock, equals the
+reconstruction.  A uniform linear trajectory bound therefore gives an upper
+bound for \(A_F\).
+
+Conversely, if \(A_F\le M\), the clock speed is at least \(e^{-kM}>0\) on
+forward angular time.  Hence the clock reaches every nonnegative physical
+time.  Inverting it constructs a global trajectory from each unit vector;
+the reconstruction gives the bound \(e^M\).  Homogeneous rescaling supplies
+trajectories and the same linear bound from arbitrary initial states.  The
+supporting declarations are
+\leanname{HGAS.exists_forwardTrajectory_of_boundedCocycle} and
+\leanname{HGAS.norm_forwardTrajectory_le_of_boundedCocycle}.
+
+Two transport results make the criterion reusable.  The declaration
+\leanname{HGAS.lyapunovStableWithExistence_conjugateField_iff} proves
+invariance under a continuous linear equivalence.  The declarations
+\leanname{HGAS.Veronese.lyapunovStableWithExistence_iff_boundedSourceAngularCocycle}
+and
+\leanname{HGAS.Veronese.lyapunovStableWithExistence_iff_boundedWeightedAngularCocycle}
+then express Theorem~\ref{thm:angular} in the source coordinates and in the
+weighted Veronese coordinates used below.
+
+\section{The stabilized cubic Veronese lift}
+\label{sec:lift}
+
+Fix \(n\ge1\) and \(k\ge1\).  Let
+\[
+ A_k=\{\alpha\in\N^n:|\alpha|=k\},\qquad
+ E_k=\R^{A_k},\qquad
+ \nu_k(x)=(x^\alpha)_{\alpha\in A_k}.
+\]
+The weighted quadratic form
+\[
+       Q(y)=\sum_{\alpha\in A_k}\binom{k}{\alpha}y_\alpha^2
+\]
+satisfies \(Q(\nu_k(x))=|x|^{2k}\).  Let \(q_r\) range over the balanced
+quadratic binomials defining the real Veronese cone, and put
+\[
+          W(y)=\sum_r q_r(y)^2.
+\]
+Thus \(W=0\) is the cone and \(Q=1,\ W=0\) is its normalized core.
+
+\subsection{A global distance estimate}
+
+The shadowing argument needs more than the set-theoretic description of the
+cone: it needs a quantitative projection estimate.
+
+\begin{proposition}[Distance to the normalized cone]
+\label{prop:distance}
+There is \(C>0\) such that, for every \(y\in E_k\) with \(Q(y)=1\), there is
+\(p\in E_k\) with \(Q(p)=1\), \(W(p)=0\), and
+\[
+          \norm{y-p}_Q^2\le C W(y).
+\]
+\end{proposition}
+
+This is
+\leanname{HGAS.Veronese.exists_coneDistanceSq_le_energy}.  The proof is
+elementary and is fully formalized.  If a pure coordinate \(y_{ke_i}\) is
+bounded away from zero, an explicit affine chart reconstructs a cone point.
+A one-token transfer relation controls the chart error inductively, coordinate
+by coordinate.  Normalizing the chart point to \(Q=1\) costs only a fixed
+factor.  Compactness of the weighted unit sphere supplies the complementary
+case: either some pure coordinate is uniformly large or \(W\) itself is
+uniformly large.  The latter alternative permits any fixed normalized cone
+point.  The proof therefore does not assume an unformalized tubular-neighborhood
+or algebraic error-bound theorem.
+
+\subsection{The cubic lift and its shadowing data}
+
+Let \(F:\R^n\to\R^n\) be homogeneous of degree \(2k+1\).  The monomial
+factorization of \(D\nu_k(x)F(x)\) defines a cubic field \(G:E_k\to E_k\)
+such that
+\[
+       G(\nu_k(x))=D\nu_k(x)F(x).
+\]
+The stabilized cubic field is
+\[
+       H(y)=G(y)-K\nabla_Q W(y).
+\]
+It agrees with \(G\) on the cone.  On the weighted unit sphere its angular
+field has the form
+\[
+       Y_H=Y_G-K\nabla_{S_Q}W,
+\]
+and its radial rate is \(a_H=a_G-4KW\).
+
+The existing GAS formalization packages the coercivity, tangency, radial,
+and gain estimates in
+\leanname{HGAS.Veronese.CubicLiftStabilizationBounds}.  The new structure
+\leanname{HGAS.Veronese.CubicLiftShadowingBounds} extends this package with a
+constant \(L\ge0\) satisfying, on \(Q=1\),
+\begin{align*}
+  \norm{Y_G(y)-Y_G(y')}_\infty
+       &\le L\norm{y-y'}_\infty,\\
+  |a_G(y)-a_G(y')|
+       &\le L\norm{y-y'}_\infty,
+\end{align*}
+and with the stronger gain condition
+\[
+       2L+1\le Kc-C.
+\]
+Here \(c>0\) is the transverse coercivity constant and \(C\) bounds the
+tangency error.  We write
+\[
+       \lambda=Kc-C>0.
+\]
+
+The theorem
+\leanname{HGAS.Veronese.exists_cubicLiftShadowingBounds} proves that such a
+package exists for every homogeneous source field.  The supporting module
+\leanmodule{HGAS/Veronese/ShadowingPrelims.lean} proves four analytic facts:
+\begin{enumerate}
+\item the angular field and radial reward are Lipschitz on the compact
+      region \(Q\le1\);
+\item the tangential penalty gradient satisfies
+      \(\norm{\nabla_{S_Q}W}_Q^2\le C_W^2W\) on \(Q=1\);
+\item a stabilized orbit starting in \(W\le\eta\) remains in that tube and
+      satisfies \(W(t)\le W(0)e^{-\lambda t}\); and
+\item stabilized and unstabilized angular flows agree on \(W=0\).
+\end{enumerate}
+
+\section{Finite-horizon shadowing}
+\label{sec:shadowing}
+
+The central obstacle is that convergence of \(W(\phi_t^H(y))\) to zero does
+not identify one cone orbit which follows the stabilized orbit for all
+future time.  Lyapunov stability, however, needs only a uniform upper bound
+on every finite cocycle segment.  The comparison orbit may therefore depend
+on the terminal horizon.
+
+\begin{theorem}[Formal orbit-shadowing statement]
+\label{thm:orbit-shadow}
+Let \(b\) be a shadowing package for a homogeneous degree-\(2k+1\) source
+field, with \(k\ge1\).  There is \(D\ge0\) such that, for every \(y\) with
+\(Q(y)=1\) and \(W(y)\le\eta\), and every horizon \(\tau\ge0\), there is a
+point \(q\) with \(Q(q)=1\) and \(W(q)=0\) such that
+\[
+ \norm{\phi_t^H(y)-\phi_t^H(q)}_\infty
+ \le D\exp(-\lambda t/2)
+ \qquad(0\le t\le\tau).
+\]
+\end{theorem}
+
+This is the literal norm and flow formulation of
+\leanname{HGAS.Veronese.exists_finiteHorizonOrbitShadowing}.  Because the
+stabilized and unstabilized flows agree on the cone, \(\phi_t^H(q)\) may
+equivalently be read as the lifted cone flow \(\phi_t^G(q)\).
+
+The proof works backward from the endpoint.
+\begin{enumerate}
+\item Exponential penalty decay and the penalty-gradient bound show that
+      the stabilized trajectory is an approximate \(Y_G\)-trajectory whose
+      forcing error is \(O(e^{-\lambda t/2})\).
+\item Proposition~\ref{prop:distance} gives a cone point \(p\) within
+      \(O(e^{-\lambda\tau/2})\) of the endpoint \(\phi_\tau^H(y)\).
+\item Flow \(p\) backward for time \(\tau\) on the invariant cone, and call
+      the result \(q\).  Then the cone trajectory from \(q\) ends at \(p\).
+\item Compare the two trajectories backward on \([0,\tau]\).  The
+      \(L\)-Lipschitz separation of \(Y_G\) competes with transverse decay.
+      The inequality \(\lambda\ge2L+1\) leaves a strict margin and yields
+      the displayed exponential estimate, uniformly in \(\tau\).
+\end{enumerate}
+
+The radial reward is \(L\)-Lipschitz in the same sup norm, so integration of
+the orbit estimate gives a horizon-independent cocycle error.
+
+\begin{corollary}[Formal radial-cocycle shadowing]
+\label{cor:cocycle-shadow}
+There is \(C_*\in\R\) such that, under the hypotheses of
+Theorem~\ref{thm:orbit-shadow}, one may choose \(q\) with
+\[
+       A_H(y,\tau)\le A_H(q,\tau)+C_*.
+\]
+\end{corollary}
+
+The exact declaration is
+\leanname{HGAS.Veronese.exists_finiteHorizonShadowing}.  This cocycle
+inequality, rather than the choice of a particular norm in the orbit
+estimate, is the fact consumed by the stability proof.
+
+\begin{remark}[Relation to the manuscript's shadowing proposition]
+The manuscript states its orbit estimate in the weighted norm
+\(\norm{\cdot}_Q\).  The named \Lean{} theorem states it in the coordinate sup
+norm carried by \leanname{RealVeroneseSpace}.  In the fixed finite-dimensional
+space the two norms are equivalent; the development proves the required norm
+comparisons internally, and the sup-norm estimate implies a weighted-norm
+estimate after multiplying \(D\) by a fixed constant.  No public declaration
+exports that last restatement verbatim.  Thus the formalization proves an
+equivalent-strength shadowing estimate and the exact cocycle conclusion used
+in the paper, but not the paper's displayed \(Q\)-norm sentence word for word.
+\end{remark}
+
+\section{The semantic Lyapunov-stability equivalence}
+\label{sec:semantic-equivalence}
+
+The angular criterion reduces Lyapunov stability to uniform upper bounds on
+radial cocycles.  On the normalized cone, the lifted cocycle is exactly \(k\)
+times the source cocycle.  Hence boundedness for the stabilized lift implies
+boundedness for the source by restriction to the positive Veronese sheet.
+
+For the converse, consider any stabilized angular orbit.  Before it enters
+the tube \(W\le\eta\), the penalty makes its radial rate nonpositive, so this
+part cannot increase the cocycle.  After entry, the tube is forward invariant
+and Corollary~\ref{cor:cocycle-shadow} compares the remaining finite segment
+with a cone segment up to \(C_*\).  The cone segment is \(k\) times a source
+segment.  A source bound \(M\) therefore gives a stabilized bound of the form
+\(\max\{0,kM+C_*\}\).
+
+\begin{theorem}[Semantic preservation and reflection of stability]
+\label{thm:semantic-ls}
+Let \(F\) be homogeneous of degree \(2k+1\), with \(k\ge1\), and let \(b\)
+be any valid shadowing package. Then the origin is Lyapunov stable with
+forward existence for \(F\) if and only if it is Lyapunov stable with forward
+existence for the stabilized cubic Veronese lift determined by \(b\).
+\end{theorem}
+
+The exact theorem is
+\leanname{HGAS.Veronese.sourceLS_iff_stabilizedCubicLS}.  It is a semantic
+theorem about polynomial fields and has no \(n\ge2\) assumption.  It is the
+Lyapunov-stability analogue of the older GAS theorem
+\leanname{HGAS.Veronese.sourceGAS_iff_stabilizedCubicGAS}.
+
+\section{From semantic lifting to a total computable compiler}
+\label{sec:codes}
+
+\subsection{A fixed-parameter effective gain}
+
+The semantic theorem permits any sufficiently large gain.  A reduction on
+finite codes must compute one without asking whether the source is stable.
+For fixed \((n,k)\), expand a homogeneous source field in the finite basis of
+coordinate monomial fields.  Lipschitz constants add under sums and scale by
+the absolute value of a coefficient.  Consequently there is a constant
+\(B_{n,k}\) such that the needed Lipschitz constant is at most
+\[
+       B_{n,k}\norm{F}_1,
+\]
+where \(\norm{F}_1\) is the sum of the absolute values of the rational
+coefficients.  This is
+\leanname{HGAS.Veronese.exists_cubicLiftLipschitz_uniform}.
+
+The development combines \(B_{n,k}\) with the fixed geometric, tangency, and
+radial constants.  It chooses once and for all a natural number \(M_{n,k}>0\)
+large enough that
+\[
+       K(F)=M_{n,k}(1+\norm{F}_1)
+\]
+satisfies every stabilization and shadowing inequality.  The package is
+\leanname{HGAS.Veronese.FixedCubicShadowGainParameters}; its existence is
+\leanname{HGAS.Veronese.nonempty_fixedCubicShadowGainParameters}.
+
+The rational code for \(K(F)\) is
+\leanname{HGAS.Veronese.effectiveCubicShadowGainCode}.  For each fixed
+\((n,k)\),
+\leanname{HGAS.Veronese.effectiveCubicShadowGainCode_primrec} proves that it
+is primitive recursive in the input code.  The theorem
+\leanname{HGAS.Veronese.exists_effectiveCubicLiftShadowingBounds} connects
+the decoded gain to the analytic shadowing package.
+
+\begin{warning}[Fixed-parameter effectivity is not uniform effectivity]
+The basis Lipschitz constants and then \(M_{n,k}\) are selected using
+\leanname{Classical.choice}.  Once \(n\) and \(k\) are fixed, \(M_{n,k}\) is a
+constant, so hard-coding it yields a genuine primitive-recursive map of
+\(F\).  The development does not give an executable procedure which receives
+\((n,k)\) as variable input and computes \(M_{n,k}\).  Therefore it formalizes
+the cubicization separately for every fixed pair, but it does not formalize
+the manuscript's uniformity proposition.
+\end{warning}
+
+\subsection{Malformed codes and the dimension hypothesis}
+
+The total compiler
+\leanname{HGAS.Veronese.effectiveCubicLSReductionCode} first tests whether
+the decoded source is homogeneous of degree \(2k+1\).  A valid code is sent to
+the stabilized cubic lift with gain \(K(F)\).  An invalid code is sent to
+\leanname{HGAS.Veronese.unstableCubicCode}, the code for
+\(\dot y_0=y_0y_1^2\), with all other coordinates constant.
+
+This fallback is homogeneous cubic and is neither GAS nor Lyapunov stable.
+Indeed, on a trajectory with \(y_1=a>0\), the first coordinate solves
+\(\dot y_0=a^2y_0\) and therefore grows exponentially.  The fully formal proof
+is
+\leanname{HGAS.Veronese.not_lyapunovStableWithExistence_unstableCubicCode}.
+
+The fallback needs two target coordinates.  The theorem
+\leanname{HGAS.Veronese.two_le_cubicLiftCodeDimension} obtains this from
+\(n\ge2\) and \(k\ge1\).  This is the sole source of the \(n\ge2\) assumption
+in the bundled raw-code HLS reduction.  A different one-dimensional negative
+fallback would remove this packaging restriction; no such alternative is
+part of the present formalization.
+
+The code-level correctness theorems are
+\begin{center}
+\leanname{HGAS.Veronese.effectiveCubicLSReductionCode_hgasQ_iff},\\
+\leanname{HGAS.Propagation.effectiveCubicLSReductionCode_hlsQ_iff}.
+\end{center}
+Together with primitive recursiveness they yield
+\leanname{HGAS.Propagation.hlsQ_manyOneReducible_cubic} and the simultaneous
+endpoint in Theorem~\ref{thm:headline}.
+
+\section{Padding and transfer of hardness}
+\label{sec:transfer}
+
+Let \(H:\R^m\to\R^m\) be cubic, let \(p,j\in\N\), and write
+\(z\in\R^p\).  Define
+\[
+ \widehat H(x,z)
+   =\bigl(|x|^2+|z|^2\bigr)^j
+      \bigl(H(x),-z_1^3,\ldots,-z_p^3\bigr).
+\]
+The field \(\widehat H\) has dimension \(m+p\) and degree \(3+2j\).
+
+The proof that padding preserves Lyapunov stability has three formal pieces.
+First,
+\leanname{HGAS.lyapunovStableWithExistence_productField_iff} proves the
+product criterion.  The independent cubic sinks are GAS, so adjoining them
+preserves and reflects stability.  Second, after a Euclidean coordinate
+identification, the radial factor equals one on the unit sphere.  The theorem
+\leanname{HGAS.lyapunovStableWithExistence_iff_of_eqOn_sphere} proves that two
+homogeneous \(C^1\) fields of possibly different degrees which agree on the
+unit sphere have the same Lyapunov-stability answer.  Third, the executable
+polynomial-code construction is connected to this semantic field.
+
+The resulting code theorem is
+\leanname{HGAS.DegreePaddingCode.degreeDimensionPadCode_hlsQ_iff_of_homogeneous}.
+Composing it with cubicization gives
+\leanname{HGAS.Propagation.hlsQ_manyOneReducible_cofinalFixedPair}:
+\[
+ \HLS_{\Q}(n,2k+1)\manyone\HLS_{\Q}(N,d)
+\]
+whenever \(n\ge2\), \(k\ge1\), \(N\ge m(n,k)\), and \(d\ge3\) is odd.
+
+The formal predicate
+\leanname{HGAS.ManyOneHard P} says that every recursively enumerable
+predicate on \(\N\) computably many-one reduces to \(P\).  The general lemmas
+\leanname{HGAS.ManyOneHard.not_computable} and
+\leanname{HGAS.ManyOneHard.complement_not_re} prove that a many-one hard
+predicate is undecidable and has a non-r.e. complement.  They do not assume
+that \(P\) itself is recursively enumerable.  This distinction matters for
+Lyapunov stability, whose membership in the r.e. sets is not established.
+
+The endpoint
+\leanname{HGAS.Propagation.hlsQ_manyOneHard_cofinal_of_source} takes a proof
+that one source language is many-one hard and returns hardness,
+undecidability, and non-r.e. complement for every cofinal target pair.  The
+weaker endpoint
+\leanname{HGAS.Propagation.hlsQ_not_computable_cofinal_of_source} transfers
+undecidability alone.
+
+Korda's construction supplies the source hypothesis in the manuscript
+\cite[Sections~3--6]{Korda2026}.  The \Lean{} theorem does not contain that
+construction.  In particular, the formalization does not independently prove
+that any HLS language is many-one hard; it proves the complete compiler and
+the exact conditional transfer from such a source.
+
+\section{Paper-to-Lean crosswalk}
+\label{sec:crosswalk}
+
+Here, calling a result formalized means that the named declaration, together
+with the declarations listed in its row, proves the paper result or the stated
+equivalent formulation.  It does not mean that every sentence of the printed
+proof has been translated line by line.
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.20\textwidth}
+                  >{\raggedright\arraybackslash}p{0.30\textwidth}
+                  >{\raggedright\arraybackslash}p{0.42\textwidth}}
+\toprule
+Paper result & Formal status & Lean declaration and module \\
+\midrule
+\endfirsthead
+\toprule
+Paper result & Formal status & Lean declaration and module \\
+\midrule
+\endhead
+Homogeneous scaling lemma (Korda Lemma~1.5)
+& Equivalent trajectory formulation, including forward existence and a bound
+  on every global forward trajectory.  No separate maximal-solution bridge is
+  exported.
+& \leanname{HGAS.lyapunovStableWithExistence_iff_uniformLinearTrajectoryBound},
+  \leanmodule{HGAS/Stability/KordaLyapunov.lean}. \\
+\addlinespace
+Angular criterion for Lyapunov stability (Korda Lemma~2.2)
+& Equivalent Euclidean cocycle criterion in the same trajectory model;
+  transported to the weighted form by a linear equivalence.
+& \leanname{HGAS.lyapunovStableWithExistence_iff_boundedEuclideanAngularCocycle},
+  \leanmodule{HGAS/Stability/AngularLyapunov.lean}; and
+  \leanname{HGAS.Veronese.lyapunovStableWithExistence_iff_boundedWeightedAngularCocycle},
+  \leanmodule{HGAS/Veronese/LyapunovAngularCriteria.lean}. \\
+\addlinespace
+Distance comparison for the Veronese cone
+& Exact existential quadratic error bound in the weighted metric.
+& \leanname{HGAS.Veronese.exists_coneDistanceSq_le_energy},
+  \leanmodule{HGAS/Veronese/ConeDistance.lean}. \\
+\addlinespace
+Lipschitz and tube estimates used by shadowing
+& Both the paper-style weighted estimates and the sup-norm estimates used by
+  the final shadowing package are formalized; fixed-parameter effectivity uses
+  the latter.
+& \leanname{HGAS.Veronese.exists_lipschitz_cubicLift_angular},
+  \leanmodule{HGAS/Veronese/ShadowingPrelims.lean}; and
+  \leanname{HGAS.Veronese.exists_cubicLiftLipschitz_uniform},
+  \leanmodule{HGAS/Computability/CubicLiftEffectiveShadowGain.lean}. \\
+\addlinespace
+Finite-horizon shadowing proposition
+& Split into an orbit theorem and a radial-cocycle theorem.  The named orbit
+  theorem uses the coordinate sup norm; the paper displays the weighted norm.
+& \leanname{HGAS.Veronese.exists_finiteHorizonOrbitShadowing} and
+  \leanname{HGAS.Veronese.exists_finiteHorizonShadowing},
+  \leanmodule{HGAS/Veronese/CubicLiftLyapunovConjugacy.lean}. \\
+\addlinespace
+Cubicization: Lyapunov-stability equivalence
+& The semantic theorem has no \(n\ge2\) side condition; the total raw-code
+  compiler does.
+& \leanname{HGAS.Veronese.sourceLS_iff_stabilizedCubicLS},
+  \leanmodule{HGAS/Veronese/CubicLiftLyapunovConjugacy.lean}; and
+  \leanname{HGAS.Propagation.effectiveCubicLSReductionCode_hlsQ_iff},
+  \leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}. \\
+\addlinespace
+Cubicization: one map for GAS and HLS
+& Exact fixed-\((n,k)\) code theorem for \(n\ge2\); uniformity in varying
+  \((n,k)\) is not formalized.
+& \leanname{HGAS.Propagation.exists_computable_cubicization},
+  \leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}. \\
+\addlinespace
+Degree raising and dimension padding
+& Exact HLS equivalence on valid cubic codes; combined with the older GAS
+  padding result.
+& \leanname{HGAS.DegreePaddingCode.degreeDimensionPadCode_hlsQ_iff_of_homogeneous},
+  \leanmodule{HGAS/Stability/PaddingLyapunov.lean}. \\
+\addlinespace
+Cubic normal form, fixed-parameter parts (i) and (ii)
+& Part (i) is an exact many-one reduction. Part (ii) is covered by the
+  padding equivalence for homogeneous cubic codes composed with cubicization;
+  bundled HLS cubicization requires \(n\ge2\).
+& \leanname{HGAS.Propagation.hlsQ_manyOneReducible_cubic} and
+  \leanname{HGAS.Propagation.hlsQ_manyOneReducible_cofinalFixedPair},
+  \leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}. \\
+\addlinespace
+Transfer of fixed-resource HLS hardness
+& Exact conditional transfer theorem.  The source-hardness premise is
+  explicit.
+& \leanname{HGAS.Propagation.hlsQ_manyOneHard_cofinal_of_source},
+  \leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}. \\
+\addlinespace
+Consequence of Korda's main reduction
+& Conditional only: Korda's construction is an external input, not a Lean
+  theorem in this repository.
+& Instantiate the preceding endpoint with a term of type
+  \leanname{HGAS.ManyOneHard (HGAS.HLSQ n0 (2*k0+1))}. \\
+\addlinespace
+Dimension-five undecidability consequence
+& Conditional undecidability transfer; the dimension-five source theorem is
+  external.
+& \leanname{HGAS.Propagation.hlsQ_not_computable_cofinal_of_source},
+  \leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}. \\
+\bottomrule
+\end{longtable}
+
+\section{Inventory of the thirteen added modules}
+\label{sec:inventory}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.40\textwidth}
+                  >{\raggedright\arraybackslash}p{0.53\textwidth}}
+\toprule
+Module & Principal contribution \\
+\midrule
+\endfirsthead
+\toprule
+Module & Principal contribution \\
+\midrule
+\endhead
+\leanmodule{HGAS/Stability/KordaLyapunov.lean}
+& Defines stability with forward existence and \(\HLS_{\Q}\); proves the
+  homogeneous uniform-linear-bound criterion. \\
+\leanmodule{HGAS/Stability/AngularLyapunov.lean}
+& Proves the Euclidean angular-cocycle criterion, including the physical-clock
+  reconstruction and existence argument. \\
+\leanmodule{HGAS/Stability/AngularCongruence.lean}
+& Proves that homogeneous fields agreeing on the unit sphere have identical
+  forward angular cocycles and the same Lyapunov-stability answer. \\
+\leanmodule{HGAS/Stability/LinearConjugacyLyapunov.lean}
+& Proves invariance of Lyapunov stability with existence under continuous
+  linear coordinate equivalences. \\
+\leanmodule{HGAS/Stability/PaddingLyapunov.lean}
+& Proves product, cubic-sink, degree-raising, dimension-padding, and executable
+  code equivalences for HLS. \\
+\leanmodule{HGAS/Veronese/LyapunovAngularCriteria.lean}
+& Transports the angular criterion to the source sphere and the weighted
+  Veronese sphere. \\
+\leanmodule{HGAS/Veronese/ConeDistance.lean}
+& Proves the global quadratic distance bound from the weighted sphere to the
+  normalized real Veronese cone. \\
+\leanmodule{HGAS/Veronese/ShadowingPrelims.lean}
+& Supplies analytic Lipschitz bounds, the penalty-gradient estimate,
+  exponential tube decay, and equality of the two flows on the cone. \\
+\leanmodule{HGAS/Veronese/CubicLiftShadowingBounds.lean}
+& Defines the stronger stabilization package carrying Lipschitz data and the
+  gain inequality needed for shadowing. \\
+\leanmodule{HGAS/Veronese/CubicLiftLyapunovConjugacy.lean}
+& Proves existence of shadowing data, finite-horizon shadowing, and semantic
+  preservation and reflection of Lyapunov stability. \\
+\leanmodule{HGAS/Computability/ManyOneHard.lean}
+& Defines many-one hardness and derives undecidability and non-r.e. complement
+  without assuming r.e. membership of the target. \\
+\leanmodule{HGAS/Computability/CubicLiftEffectiveShadowGain.lean}
+& Builds the fixed-parameter primitive-recursive gain and total compiler,
+  proves the unstable fallback negative, and establishes code-level GAS and
+  conditional HLS correctness. \\
+\leanmodule{HGAS/Propagation/CofinalLyapunovReduction.lean}
+& Discharges the semantic premise, combines GAS and HLS in one compiler, adds
+  padding, and proves cofinal hardness and undecidability transfer. \\
+\bottomrule
+\end{longtable}
+
+\section{Exact limitations and nonclaims}
+\label{sec:limitations}
+
+The formalization proves the dependency chain needed for the fixed-parameter
+results.  It deliberately makes the following boundaries visible.
+
+\begin{enumerate}
+\item \textbf{The raw-code bundled theorem assumes \(n\ge2\).}
+  The semantic lift is valid for \(n\ge1\).  The extra assumption supports
+  the two-coordinate negative fallback for malformed codes.
+
+\item \textbf{Computability is fixed-parameter.}
+  For each fixed \((n,k)\), the compiler is primitive recursive in \(F\).
+  The formalization does not compute the hard-coded multiplier from a
+  variable input \((n,k)\), so it does not establish the paper's uniformity
+  proposition.
+
+\item \textbf{The public orbit theorem uses the sup norm.}
+  It gives an equivalent-strength finite-dimensional estimate and proves the
+  required cocycle theorem, but it is not a verbatim export of the paper's
+  displayed weighted-\(Q\)-norm inequality.
+
+\item \textbf{The maximal-solution bridge is mathematical context, not an
+  exported Lean theorem.}
+  The development represents solutions as global forward trajectories and
+  includes forward existence in the stability predicate.  Polynomial local
+  uniqueness makes this equivalent to the customary maximal-solution wording,
+  but the repository does not expose a standalone theorem between those two
+  APIs.
+
+\item \textbf{Korda's hardness and undecidability constructions are
+  external.}
+  The formalization proves trajectory-model counterparts of Korda's two
+  analytic lemmas used by the cubicization, but not the register-machine
+  reduction of \cite{Korda2026} or the dimension-five supplement
+  \cite{KordaSupp2026}.  The final transfer declarations take the
+  corresponding hardness or undecidability statement as a hypothesis.
+
+\item \textbf{Many-one hardness is not called completeness.}
+  No theorem here shows that \(\HLS_{\Q}(n,d)\) is recursively enumerable.
+  The formal conclusion from Korda's source is therefore hardness,
+  undecidability, and a non-r.e. complement, not
+  \(\Sigma^0_1\)-completeness.
+
+\item \textbf{Variable-resource normal forms are outside this extension.}
+  The formalization does not cover the manuscript's variable-dimension
+  statements, even-degree conversion, decision procedure for linear fields,
+  or the consequence for GAS of fields \(H-\mathrm{id}\).
+\end{enumerate}
+
+These limitations do not weaken the fixed-dimension, fixed-degree GAS
+completeness theorem documented in the earlier companion.  They delimit the
+new HLS and shared-cubicization claims.
+
+\section{Reproduction and trust boundary}
+\label{sec:trust}
+
+The repository pins Lean and Mathlib at version 4.30.0.  From the repository
+root containing \leanmodule{lakefile.toml}, a fresh build is obtained with
+\begin{verbatim}
+lake update
+lake build HGAS
+\end{verbatim}
+The public import root is \leanmodule{HGAS.lean}.
+
+The new endpoints are ordinary theorems, not project axioms.  Kernel axiom
+inspection of the audited endpoints reports only
+\leanname{propext}, \leanname{Classical.choice}, and
+\leanname{Quot.sound}.  Classical choice is used, among other places, to
+select fixed analytic constants and the multiplier \(M_{n,k}\); as explained
+in Section~\ref{sec:codes}, this is compatible with a computable map for each
+fixed pair but does not yield a uniform executable function of the pair.
+
+Lean's kernel checks the elaborated proof terms.  Mathlib supplies the
+underlying finite-dimensional analysis, ODE, integration, polynomial, and
+computability libraries \cite{Lean4,Mathlib}.  The nonroutine external
+mathematical input needed to instantiate the final HLS hardness transfer is
+Korda's unformalized source reduction.  Identifying its maximal-solution
+wording with \Lean{}'s global-forward-trajectory predicate also uses the
+standard polynomial existence-and-uniqueness context described in
+Section~\ref{sec:semantics}; that API bridge is not itself exported as a
+Lean theorem.
+
+\section{Conclusion}
+
+The extension closes the formal gap between a cubic lift that preserves GAS
+and one that also preserves Lyapunov stability.  Its main new idea is the
+finite-horizon comparison selected from the endpoint of each orbit segment.
+This construction converts exponential transverse attraction into a uniform
+radial-cocycle bound without requiring one cone orbit to shadow forever.  The
+formal proof then connects the semantic argument to a primitive-recursive
+compiler on raw rational codes and to cofinal fixed-resource transfer.
+
+The resulting release should therefore present two complementary artifacts:
+the earlier GAS completeness companion, preserved as a record of the original
+824-module development, and this companion for the thirteen-module HLS and
+shared-cubicization extension.  A coverage ledger can refer readers to both
+documents while distinguishing exact statements, equivalent formulations,
+conditional applications, and results not formalized.
+
+\begin{thebibliography}{9}
+
+\bibitem{Korda2026}
+M.~Korda,
+\emph{Lyapunov stability of polynomial vector fields is undecidable},
+arXiv:2609.22058v2, 2026.
+\url{https://arxiv.org/abs/2609.22058}.
+
+\bibitem{KordaSupp2026}
+M.~Korda,
+\emph{Supplementary material for "Lyapunov stability of polynomial vector
+fields is undecidable": dimension five, global asymptotic stability, and the
+planar case}, 2026.
+\url{https://homepages.laas.fr/mkorda/arnold_supplement.pdf}.
+
+\bibitem{Lean4}
+L.~de Moura and S.~Ullrich,
+\emph{The Lean 4 theorem prover and programming language},
+in \emph{Automated Deduction---CADE 28}, Lecture Notes in Computer Science
+12699, Springer, 2021, pp.~625--635.
+\url{https://doi.org/10.1007/978-3-030-79876-5_37}.
+
+\bibitem{Mathlib}
+The Mathlib Community,
+\emph{The Lean mathematical library},
+in \emph{Proceedings of the 9th ACM SIGPLAN International Conference on
+Certified Programs and Proofs}, 2020, pp.~367--381.
+\url{https://doi.org/10.1145/3372885.3373824}.
+
+\end{thebibliography}
+
+\end{document}
