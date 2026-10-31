@@ -1,7 +1,8 @@
 # Formalization companions and technical notes
 
-The repository has two primary companion documents because the formal proof
-has two largely independent mathematical layers.
+The repository has three companion documents. The first two preserve the
+published GAS and cubicization developments; the third documents the
+`Stability` library.
 
 ## GAS completeness
 
@@ -19,13 +20,27 @@ repository.
 `cubicization_hls_formalization_companion.tex` explains the 13-module
 extension: Lyapunov stability with forward existence, angular cocycles,
 finite-horizon shadowing, the common GAS/HLS cubic compiler, padding, and
-conditional transfer from Korda's theorem.  Its rendered PDF is
+conditional transfer of source hardness. Its rendered PDF is
 `cubicization_hls_formalization_companion.pdf`.
 
 The document states the formal scope explicitly.  In particular, the bundled
-raw-code GAS/HLS compiler assumes source dimension at least two, its
-computability is fixed-parameter rather than uniform in varying `(n,k)`, and
-Korda's source hardness theorem remains an external input.
+raw-code GAS/HLS compiler assumes source dimension at least two, and its
+computability is fixed-parameter rather than uniform in varying `(n,k)`.
+The conditional transfer theorems are preserved; the `Stability` library
+now supplies their source-hardness hypothesis.
+
+## Further stability results
+
+`stability_formalization_companion.tex` explains the broader ordinary-time
+selector, explicit Fourier bounds and printed-gain GAS construction,
+degree-input and joint dimension-and-odd-degree-input languages, polynomial
+GAS/LAS hardness, and the full halting-to-HLS reduction. Its rendered PDF is
+`stability_formalization_companion.pdf`.
+
+The HLS source reduction and its cubic/cofinal hardness consequences are
+unconditional; they do not assert recursive enumerability of HLS. The
+variable-resource results cover the stated raw languages, not every part
+of the paper's variable-resource corollary.
 
 ## Authoritative coverage record
 
@@ -35,7 +50,7 @@ from equivalent formulations, alternative formal routes, conditional
 transfer results, and results that are not formalized.
 
 `hgas_formalization_companion.tex` is an earlier predecessor retained for
-historical context.  The two documents named above are the release
+historical context. The three documents named above are the release
 companions.
 
 The remaining Markdown and TeX files in this directory record focused

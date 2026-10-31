@@ -9,10 +9,10 @@ This repository is the canonical Lean source for two related developments:
    finite-horizon shadowing, and one fixed-parameter cubic compiler that
    preserves both GAS and HLS.
 
-The HLS development adds 13 modules without changing any of the 824 modules
-in the preceding GAS release. This layout preserves the earlier artifact
-while providing one current source tree and one public import root,
-`HGAS.lean`.
+The published HLS development adds 13 modules without changing any of the
+824 modules in the preceding GAS release. These 837 modules and their
+public root, `HGAS.lean`, remain unchanged. The further results below use
+the separate public root `Stability.lean` in the same source tree.
 
 The accompanying paper is
 [Global asymptotic stability of homogeneous polynomial vector fields is undecidable](https://arxiv.org/abs/2610.12434)
@@ -23,9 +23,32 @@ the headline coded-language endpoints and formal analogues sufficient for
 their Lean dependency chains. Some printed intermediate results are exposed
 in equivalent or alternative forms rather than copied verbatim.
 
+## Further stability results
+
+The `Stability` library adds general polynomial GAS/LAS hardness, uniform
+dimension-and-odd-degree-input semidecision, and the broader ordinary-time trajectory selector
+with its compact-measure application. Build it with `lake build Stability`; the published
+`HGAS` sources and pinned environment are unchanged.
+
+Beyond the core GAS proof, the new library formalizes the halting-to-HLS
+construction from [Korda's written proof](https://arxiv.org/abs/2609.22058v2),
+without copying or porting his earlier
+[Lean implementation](https://homepages.laas.fr/mkorda/arnold_lean.zip).
+It derives the computational source from Mathlib's universal evaluator
+and discharges the source-hardness assumption: `Stability/Computability/UniversalStabilityReduction.lean`
+proves unconditional HLS hardness for a fixed cubic dimension and every
+larger dimension and odd degree at least three. This is a hardness result,
+not an assertion that HLS is recursively enumerable.
+
+Proof explanations are in `docs/stability_formalization_companion.tex`
+and its PDF; exact coverage is recorded in `FORMALIZATION_LEDGER.md`.
+Use `scripts/StabilityAxiomAudit.lean` and `scripts/StabilityRegression.lean`
+for the additional checks.
+
 ## Companion documents and coverage ledger
 
-The repository keeps two companions with distinct scopes:
+The repository keeps two preserved companions with distinct scopes,
+alongside the stability companion described above:
 
 - `docs/hgas_sigma1_complete_formalization_companion.tex` is the preserved
   companion to the original 824-module GAS formalization. Its rendered PDF
@@ -37,14 +60,15 @@ The repository keeps two companions with distinct scopes:
 `FORMALIZATION_LEDGER.md` is the authoritative current crosswalk. It labels
 paper-to-Lean correspondences as exact, equivalent or alternative,
 conditional, or not formalized. `LEGACY_MODULES.md` separately catalogs the
-41 source modules outside the public import closure.
+41 source modules outside the `HGAS.lean` import closure; two of these
+are dependencies of `Stability.lean`.
 
 ## Build
 
 The project is pinned to Lean and Mathlib 4.30.0.
 
 ```bash
-lake build HGAS
+lake build HGAS Stability
 ```
 
 During development,
@@ -112,10 +136,11 @@ selected noncomputably once the pair is fixed. The repository does not
 claim one compiler computable uniformly in varying `(n,k)`, nor does it
 claim that the selected multiplier is currently evaluable.
 
-The cofinal HLS hardness and undecidability declarations are conditional
-transfer theorems. Korda's external source hardness or undecidability result
-appears as an explicit hypothesis named `hsource`; it is not formalized or
-introduced as a project axiom.
+The preserved cofinal HLS declarations are conditional transfer theorems:
+their source hardness appears as an explicit hypothesis named `hsource`,
+not a project axiom. The new `Stability` library proves that source result
+and applies these unchanged transfer theorems to obtain unconditional HLS
+hardness, as described above.
 
 ## Trust policy
 
@@ -132,7 +157,7 @@ rg -n \
   -e '^[[:space:]]*((private|protected)[[:space:]]+)?unsafe[[:space:]]' \
   -e '^[[:space:]]*(sorry|admit)\b' \
   -e ':=[[:space:]]*(by[[:space:]]+)?(sorry|admit)\b' \
-  HGAS HGAS.lean
+  HGAS HGAS.lean Stability Stability.lean
 ```
 
 The audited headline endpoints report only `propext`, `Classical.choice`,
@@ -150,7 +175,10 @@ automatically reject an unexpected additional axiom.
 
 ## Source coverage
 
-The directory `HGAS/` contains 837 Lean modules. The transitive import
+The directory `Stability/` contains 251 Lean modules, all in the transitive
+import closure of `Stability.lean`.
+
+The preserved directory `HGAS/` contains 837 Lean modules. The transitive import
 closure of `HGAS.lean` contains 796 of them. The remaining 41 historical,
 alternative, or audit modules are catalogued in `LEGACY_MODULES.md`; all 41
 also elaborate independently with warnings treated as errors.
@@ -168,6 +196,13 @@ HGAS source modules: 837
 Public import closure: 796
 Outside public closure: 41
 LEGACY_MODULES.md exact-set check: PASS
+Stability source modules: 251
+Stability modules in Stability.lean closure: 251
+Stability modules outside Stability.lean closure: 0
+Catalogued HGAS modules in Stability.lean closure: 2
+  HGAS/Modular/GammaTwoHorocycleOrientationReversal.lean
+  HGAS/Modular/GammaTwoScaledPointwiseEquidistribution.lean
+Stability import-closure check: PASS
 ```
 
 ## Copyright and license

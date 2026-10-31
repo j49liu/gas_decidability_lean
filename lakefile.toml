@@ -16,3 +16,6 @@ rev = "v4.30.0"
 
 [[lean_lib]]
 name = "HGAS"
+
+[[lean_lib]]
+name = "Stability"

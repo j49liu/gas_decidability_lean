@@ -1,12 +1,15 @@
 # Modules outside the public `HGAS` import closure
 
-Last verified: 2026-10-08
+Import closures last verified: 2026-10-31
 
 The transitive import closure of `HGAS.lean` contains 796 of the 837
 modules under `HGAS/`. The 41 modules below are outside that closure.
 They are retained as historical alternatives, intermediate experiments,
-or audit/query modules; none is a dependency of the public theorem
-endpoint.
+or audit/query modules; none is a dependency of an endpoint exported by
+`HGAS.lean`. Items 33 and 35, `GammaTwoHorocycleOrientationReversal.lean`
+and `GammaTwoScaledPointwiseEquidistribution.lean`, are dependencies of
+`Stability.lean` through `Stability/Selection/LinearThetaCuspExclusion.lean`.
+They remain outside the `HGAS` root, so the catalog below is unchanged.
 
 The 13 modules added for Lyapunov stability, shadowing, and the common
 GAS/HLS cubic compiler all belong to the public closure. Consequently, the
@@ -103,6 +106,6 @@ with the final routing:
   not use its finite-permutation-cover specializations and follows a
   different unconditional pointwise route.
 
-The public root should not import the 41 files merely to make a coverage
+The `HGAS` root should not import the 41 files merely to make a coverage
 count look simpler. Keeping the endpoint closure narrow makes the theorem
 dependency graph auditable.

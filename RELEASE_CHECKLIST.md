@@ -1,9 +1,9 @@
 # Release checklist
 
-This file records the checks for publishing the merged formalization and
+This file records the checks for publishing both libraries and
 optional follow-up steps for citation metadata and signed releases.
 
-## Completed locally
+## Completed for the merged release (2026-10-08)
 
 - [x] Base the release branch on GitHub `main` commit
   `d837330957a1ef12ab1bcca6fc7867f9c308ca63`.
@@ -23,6 +23,17 @@ optional follow-up steps for citation metadata and signed releases.
 - [x] Identify the copyright holders as Jun Liu and Ivan O. Shevchenko.
 - [x] License the formalization under the Apache License, Version 2.0.
 - [x] Link the accompanying paper, arXiv:2610.12434, from the README.
+
+## Stability extension
+
+- [x] Preserve the 837 published `HGAS` modules and pinned dependencies.
+- [x] Import all 251 added modules from `Stability.lean`.
+- [x] Add and render `docs/stability_formalization_companion.tex`.
+- [x] Record exact coverage and limitations in `FORMALIZATION_LEDGER.md`.
+- [x] Add `scripts/StabilityAxiomAudit.lean` and
+  `scripts/StabilityRegression.lean`.
+- [x] Extend the import checker to both roots and report shared legacy dependencies.
+- [x] Build both libraries and run both axiom audits and the Stability regressions.
 
 ## Optional follow-up requiring an author decision or credential
 
@@ -45,12 +56,14 @@ Run the following commands from the repository root:
 
 ```bash
 git fetch origin
-lake build
+lake build HGAS Stability
 python3 scripts/check_import_closure.py
 while IFS= read -r legacy_module; do
   lake env lean -DwarningAsError=true "$legacy_module" || exit 1
 done < <(sed -n 's/^[0-9][0-9]*\. `\(HGAS\/[^`]*\.lean\)`$/\1/p' LEGACY_MODULES.md)
 lake env lean -DwarningAsError=true scripts/ReleaseAxiomAudit.lean
+lake env lean -DwarningAsError=true scripts/StabilityAxiomAudit.lean
+lake env lean -DwarningAsError=true scripts/StabilityRegression.lean
 git diff --check origin/main...HEAD
 git diff --check
 git status --porcelain
@@ -60,7 +73,12 @@ git config --get user.name
 git config --get user.email
 ```
 
-The status output must be empty, and the revision count must begin with `0`,
+Both library targets are explicit because plain `lake build` defaults to
+`HGAS` only. Inspect both axiom-audit outputs for dependencies outside
+`propext`, `Classical.choice`, and `Quot.sound`.
+
+After the reviewed changes have been committed, the status output must be
+empty, and the revision count must begin with `0`,
 which shows that the release commit is a fast-forward descendant of the
 current remote branch. The two identity commands must print the reviewed name
 and email above. Build against the committed `lake-manifest.json`; dependency

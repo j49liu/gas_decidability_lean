@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Check the public HGAS import closure and outside-module catalog.
+"""Check both public import closures and the HGAS outside-module catalog.
 
-The script follows project imports starting at ``HGAS.lean``, counts source
-files under ``HGAS/``, and checks that ``LEGACY_MODULES.md`` lists exactly
-the modules outside the public closure.
+The preserved HGAS checks require the 837/796/41 counts and exact equality
+with ``LEGACY_MODULES.md``. The Stability check requires every source module
+under ``Stability/`` to belong to the ``Stability.lean`` closure. Catalogued
+HGAS modules used by Stability are reported separately.
 """
 
 from __future__ import annotations
@@ -14,20 +15,18 @@ from pathlib import Path
 
 LEAN_ROOT = Path(__file__).resolve().parents[1]
 HGAS_ROOT = LEAN_ROOT / "HGAS"
-PUBLIC_ROOT = LEAN_ROOT / "HGAS.lean"
+STABILITY_ROOT = LEAN_ROOT / "Stability"
 CATALOG = LEAN_ROOT / "LEGACY_MODULES.md"
 
 EXPECTED_TOTAL = 837
 EXPECTED_PUBLIC = 796
 EXPECTED_OUTSIDE = 41
 
-IMPORT_RE = re.compile(r"^import\s+(HGAS(?:\.[A-Za-z0-9_']+)*)\s*$")
+IMPORT_RE = re.compile(r"^import\s+((?:HGAS|Stability)(?:\.[A-Za-z0-9_']+)*)\s*$")
 CATALOG_RE = re.compile(r"^\d+\.\s+`(HGAS/.*\.lean)`$")
 
 
 def module_path(module: str) -> Path:
-    if module == "HGAS":
-        return PUBLIC_ROOT
     return LEAN_ROOT / (module.replace(".", "/") + ".lean")
 
 
@@ -45,12 +44,9 @@ def source_module(path: Path) -> str:
     return ".".join(relative.parts)
 
 
-def main() -> None:
-    sources = sorted(HGAS_ROOT.rglob("*.lean"))
-    all_modules = {source_module(path) for path in sources}
-
+def import_closure(root: str) -> set[str]:
     closure: set[str] = set()
-    pending = ["HGAS"]
+    pending = [root]
     while pending:
         module = pending.pop()
         if module in closure:
@@ -60,6 +56,13 @@ def main() -> None:
             raise SystemExit(f"missing project import: {module} ({path})")
         closure.add(module)
         pending.extend(project_imports(path))
+    return closure
+
+
+def main() -> None:
+    sources = sorted(HGAS_ROOT.rglob("*.lean"))
+    all_modules = {source_module(path) for path in sources}
+    closure = import_closure("HGAS")
 
     public_modules = (closure - {"HGAS"}) & all_modules
     outside_modules = all_modules - public_modules
@@ -98,6 +101,25 @@ def main() -> None:
         raise SystemExit("outside-module catalog mismatch")
 
     print("LEGACY_MODULES.md exact-set check: PASS")
+
+    stability_modules = {
+        source_module(path) for path in STABILITY_ROOT.rglob("*.lean")
+    }
+    stability_closure = import_closure("Stability")
+    stability_public = stability_closure & stability_modules
+    stability_outside = stability_modules - stability_public
+    print(f"Stability source modules: {len(stability_modules)}")
+    print(f"Stability modules in Stability.lean closure: {len(stability_public)}")
+    print(f"Stability modules outside Stability.lean closure: {len(stability_outside)}")
+    if stability_outside:
+        print(*sorted(stability_outside), sep="\n")
+        raise SystemExit("Stability modules outside the public closure")
+
+    shared_legacy = outside_modules & stability_closure
+    print(f"Catalogued HGAS modules in Stability.lean closure: {len(shared_legacy)}")
+    for module in sorted(shared_legacy):
+        print(f"  {module.replace('.', '/')}.lean")
+    print("Stability import-closure check: PASS")
 
 
 if __name__ == "__main__":
