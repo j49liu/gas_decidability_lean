@@ -1,4 +1,4 @@
-# Stability and undecidability in Lean
+# Lean Formalization of Undecidability of Stability for Homogeneous Polynomial Vector Fields
 
 This repository contains machine-checked proofs about the limits of deciding
 stability for polynomial differential equations. The central result is that
@@ -15,20 +15,21 @@ by Ivan O. Shevchenko, Jun Liu, and Xinzhi Liu.
 For every sufficiently large fixed dimension and every fixed odd degree
 at least three, homogeneous GAS is **Σ⁰₁-complete**. In practical terms,
 there is a search procedure that eventually recognizes exactly the positive
-instance, but no algorithm that always terminates and correctly decides
+instances, but no algorithm that always terminates and correctly decides
 both positive and negative instances.
 
-The repository also proves **many-one hardness for homogeneous Lyapunov
-stability (HLS)**, again in sufficiently large fixed dimensions and every odd
-degree at least three. Its reduction from the halting problem is fully
-formalized. This is a hardness result, not a claim that Lyapunov stability
-is recursively enumerable.
+The undecidability of homogeneous Lyapunov stability (HLS) was established
+by Milan Korda in
+[Lyapunov stability of polynomial vector fields is undecidable](https://arxiv.org/abs/2609.22058v2).
+In [our paper](https://arxiv.org/abs/2610.12434), we sharpen this result to
+**many-one hardness** in every sufficiently large fixed dimension and every
+fixed odd degree at least three, including cubic fields. This does not
+establish that HLS is recursively enumerable.
 
-Beyond the core GAS proof, we formalize the halting-to-Lyapunov-stability
-construction from [Korda's written proof](https://arxiv.org/abs/2609.22058v2).
-The development starts from Mathlib's universal evaluator and does not
-copy or port his earlier
-[Lean implementation](https://homepages.laas.fr/mkorda/arnold_lean.zip).
+To make the Lean development self-contained, we also formalize the
+halting-to-HLS reduction underlying Korda's proof and combine it with our
+cubicization argument. A Lean formalization of Korda's original write-up
+is also available in [his Lean development](https://homepages.laas.fr/mkorda/arnold_lean.zip).
 
 Further results include GAS completeness for explicitly defined languages
 with odd degree, or dimension and odd degree, supplied as input. They also
@@ -38,8 +39,8 @@ bound at least three. Recursive enumerability is not claimed for these
 general polynomial stability problems.
 
 The dimension thresholds are symbolic: this development does not compute
-numerical bounds or settle the three-dimensional cubic GAS or Lyapunov
-stability problems. Nor is every statement in the paper formalized
+numerical bounds or settle the three-dimensional cubic GAS or HLS
+problems. Nor is every statement in the paper formalized
 verbatim. In particular, coverage of its variable-resource corollary is
 partial: separate fixed-degree, dimension-input theorems and an
 identification with the paper's unrestricted all-degree language are not
