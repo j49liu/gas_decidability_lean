@@ -17,7 +17,7 @@
 \title{Polynomial stability and computability\\
 \large Proof explanations, formal interfaces, and verified scope}
 \author{Companion to the Lean development of Jun Liu and Ivan O. Shevchenko}
-\date{31 October 2026}
+\date{3 November 2026}
 \begin{document}
 \maketitle
 
@@ -29,9 +29,12 @@ revised manuscript \cite{paper} at Overleaf commit \code{6f5bced}, in
 \texttt{new Main Document}. The published \code{HGAS} library, its public
 theorem statements, and its Lean/Mathlib 4.30.0 environment are preserved.
 The two earlier companions continue to document their respective releases.
+The exact-degree extension in Section~\ref{sec:exactdegree} follows the
+revised Corollary~11.2 at Overleaf commit \code{1fed6c4}; this later
+reference applies to that corollary, not to every statement in the manuscript.
 
 The new library is not a claim that every revised intermediate statement
-has already been formalized. The bounded-degree polynomial GAS and LAS
+has already been formalized. The bounded- and exact-degree polynomial GAS and LAS
 corollaries and uniform dimension-and-odd-degree-input completeness theorem below
 are proved. The Fourier estimate, recurrence lemma, restart-budget lemma,
 and cubic-relaxation estimates are completed supporting results, with the limits of
@@ -123,7 +126,7 @@ linear-bound characterization \cite[Lemma 1.5]{korda}.
 \section{General polynomial GAS and LAS}
 
 The input is a finite sparse rational code for a polynomial vector field.
-Our new languages \code{PGASQ n d} and \code{PLASQ n d} require each decoded
+The preserved languages \code{PGASQ n d} and \code{PLASQ n d} require each decoded
 coordinate polynomial to have total degree at most $d$, require the origin
 to be an equilibrium, and require GAS or LAS, respectively. The degree
 bound is imposed \emph{after decoding}: two entries of arbitrarily high
@@ -178,6 +181,121 @@ reduction:
 \code{cubicToPolynomialCode_correct_las}.
 \end{quote}
 The endpoint names begin with \code{pgasQ_} and \code{plasQ_}.
+
+\subsection{Prescribing the exact degree}\label{sec:exactdegree}
+
+The revised paper requires degree \emph{equal to} $d$, not merely at most
+$d$. The distinction matters: a cubic field belongs to a degree-at-most-four
+class but not to the exact-degree-four class. The new languages
+\code{PGASExactQ}$(n,d)$ and \code{PLASExactQ}$(n,d)$ require every decoded
+coordinate to have degree at most $d$ and at least one to have degree $d$.
+As before, decoding comes first, so cancelling monomials cannot change
+membership. The earlier languages and their theorems retain their meanings.
+
+\begin{theorem}
+For every fixed $n\ge N_*+2$ and every fixed $d\ge3$, both
+\code{PGASExactQ}$(n,d)$ and \code{PLASExactQ}$(n,d)$ are $\Sigma^0_1$-hard.
+They are undecidable and their complements are not recursively enumerable.
+There is no parity restriction on $d$.
+\end{theorem}
+
+The idea is to add two variables whose dynamics are always GAS and whose
+equations force the desired degree. We use exactly the factor in the paper:
+\[
+ g_d(w,z)=(-w^3,-z^3+w^d).
+\]
+Its GAS proof is short enough to give in full. Write $d=k+3$, with $k\ge0$,
+and set
+\[
+ V(w,z)=w^2+w^{4k+2}+z^2.
+\]
+This function vanishes only at the origin, is nonnegative, and tends to
+infinity with the norm. Its derivative along the field is
+\[
+ \dot V=-2w^4-(4k+2)w^{4k+4}-2z^4+2zw^{k+3}.
+\]
+The nonnegativity of $(w^2-zw^{k+1})^2$ and
+$(z^2-w^{2k+2})^2$ gives
+\[
+ 2zw^{k+3}\le w^4+z^2w^{2k+2}
+ \le w^4+\tfrac12z^4+\tfrac12w^{4k+4}.
+\]
+Consequently,
+\[
+ \dot V\le-w^4-\tfrac32z^4-(4k+\tfrac32)w^{4k+4}
+ \le-w^4-z^4.
+\]
+
+Every trajectory stays in its initial compact sublevel set of $V$.
+Smoothness of $g_d$ and the continuation theorem therefore give a global
+forward solution from every initial state. Continuity of $V$ at zero,
+its monotonicity along trajectories, and
+$V(w,z)\ge\max(|w|,|z|)^2$ prove Lyapunov stability. To prove attraction,
+fix $\eta>0$. On the compact set
+\[
+ \{(w,z):\eta\le V(w,z)\le V(w_0,z_0)\},
+\]
+the function $w^4+z^4$ has a positive lower bound whenever the set is
+nonempty. Thus $V$ cannot stay above $\eta$ forever: otherwise it would
+decrease at a fixed positive rate and become negative. Once below $\eta$,
+it stays there. This proves $V\to0$, hence $(w,z)\to(0,0)$.
+Lean proves these steps in \code{Dynamics/DegreeCarrier.lean}; the endpoint
+is \code{degreeCarrier_gas}. The manuscript instead bounds trajectories
+first and uses $w^2+z^2$ on a strip. The field and conclusion are identical;
+the global Lyapunov estimate is an alternative proof of the same ingredient.
+The additional theorem \code{degreeCarrier_quadratic_derivative_le} also
+verifies the paper's local estimate for $W(w,z)=w^2+z^2$:
+\[
+ DW(w,z)[g_d(w,z)]\le-\tfrac14\bigl(w^2+z^2\bigr)^2
+ \qquad\text{when }|w|\le1.
+\]
+
+\begin{proof}[Proof of the exact-degree theorem]
+Put $m=n-2\ge N_*$. For a raw $m$-dimensional input $F$, let $C(F)$ be
+the cubic validator from the preceding proof and output
+\[
+ R_d(F)(x,w,z)=(C(F)(x),-w^3,-z^3+w^d).
+\]
+This map is primitive recursive for fixed $m,d$. Every coordinate has
+degree at most $d$, and the last coordinate contains $w^d$ with coefficient
+one. This monomial cannot cancel against $-z^3$, even when $d=3$.
+Thus the decoded field has exact degree $d$ on \emph{every} input.
+
+A product of two fields is GAS if both factors are GAS. Conversely, if
+the second factor has an equilibrium at zero, restricting to trajectories
+with that factor constantly zero shows that GAS of the product implies
+GAS of the first factor. The analogous LAS equivalence holds, with local
+existence included in the definitions. For the forward direction take a
+common small radius for the factors; for the reverse direction project
+product trajectories and extend any given first-factor trajectory by the
+constant second-factor trajectory. These are the reusable product lemmas
+in \code{Dynamics/ProductStability.lean} and the preserved GAS library.
+
+If $F$ is homogeneous cubic, Theorem~\ref{thm:lasgas} identifies its LAS
+and GAS. Since $g_d$ is GAS, the product has either target property exactly
+when $F$ is GAS. If $F$ fails the homogeneity test, $C(F)=0$; in positive
+dimension this factor is neither GAS nor LAS, so the product is in neither
+target language. The paper uses an identity field instead of zero in this
+invalid-input branch. Both choices give negative GAS and LAS instances;
+the zero choice is \emph{not} a negative Lyapunov-stability instance.
+
+The code realization is proved equal, under the explicit coordinate
+identification $\R^{m+2}\simeq\R^m\times(\R\times\R)$, to this product.
+Thus both equivalences are statements about the emitted rational
+polynomial codes, not just about an abstract product field. Composing with
+the cubic HGAS hardness theorem gives the asserted reductions and their
+undecidability and complement consequences.
+\end{proof}
+
+The definitions are in \code{Computability/ExactPolynomialLanguages.lean};
+the compiler, its exact-degree proof, and its realization are in
+\code{Computability/ExactDegreePolynomialCode.lean}. The composed reductions
+and cofinal endpoints are in
+\code{Computability/ExactPolynomialStability.lean}.
+All these paths are relative to \code{Stability/}. The principal endpoint
+names are \code{pgasExactQ_manyOneHard} and \code{plasExactQ_manyOneHard};
+the named threshold \code{exactPolynomialDimensionThreshold} is $N_*+2$.
+No recursive-enumerability assertion for either target language is added.
 
 \section{A single checker when the degree is input data}
 

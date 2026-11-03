@@ -40,8 +40,9 @@ Further completeness results concern sets of codes with odd degree, or
 both dimension and odd degree, supplied as input. We also prove many-one
 hardness of GAS and local asymptotic stability for polynomial vector fields
 without the homogeneity restriction, in every sufficiently large fixed
-dimension and with any fixed degree bound at least three. We do not claim
-recursive enumerability for these non-homogeneous problems.
+dimension and with any fixed exact degree at least three, including even
+degrees. The earlier bounded-degree results remain available. We do not
+claim recursive enumerability for these non-homogeneous problems.
 
 The bounds on dimension are not evaluated numerically, and neither
 HGAS(3, 3) nor HLS(3, 3) is settled here. Not every statement in the paper

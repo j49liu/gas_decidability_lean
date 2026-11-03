@@ -1,5 +1,33 @@
 # Release notes
 
+## Exact-degree polynomial GAS and LAS
+
+Prepared on 2026-11-03, following Corollary 11.2 at Overleaf commit `1fed6c4`.
+
+Five new `Stability` modules prove many-one hardness, undecidability, and
+non-r.e. complements for general polynomial GAS and LAS in every fixed
+dimension at least the cubic HGAS threshold plus two, and every fixed
+**exact degree** at least three. Even degrees are included. Degree means
+decoded polynomial degree, not the largest exponent in the sparse code.
+
+The compiler appends the paper's planar factor `(-w^3, -z^3 + w^d)`.
+A global polynomial Lyapunov function proves this factor is GAS; reusable
+product and linear-coordinate-change lemmas transfer LAS. Raw-code
+correctness includes malformed source inputs. The previous bounded-degree
+languages and the entire published `HGAS` library remain unchanged.
+
+The updated ledger and stability companion explain the exact-degree proof,
+its threshold, and its small differences from the written argument. The
+regressions cover even degree, cancellation, malformed inputs, and the
+distinction between exact degree and an upper bound. These are hardness
+results; recursive enumerability of general polynomial GAS/LAS is not claimed.
+
+Both library roots build successfully. All 256 Stability modules are
+root-reachable. The updated Stability audit checks 484 declarations, with
+only `propext`, `Classical.choice`, and `Quot.sound`; no project-namespaced
+axioms occur. The warning-as-error regressions and the preserved release
+axiom audit also pass.
+
 ## Stability extension
 
 Prepared on 2026-10-31, based on published commit `81276ab`.
@@ -84,7 +112,7 @@ lake env lean -DwarningAsError=true scripts/StabilityRegression.lean
 ```
 
 The expected source counts are 837 modules under `HGAS/`, 796 modules in the
-`HGAS.lean` import closure, and 41 modules outside that root. All 251
+`HGAS.lean` import closure, and 41 modules outside that root. All 256
 `Stability` modules belong to the `Stability.lean` closure, which also uses
 two of the 41 catalogued HGAS modules. The catalog remains relative to
 `HGAS.lean`; its 41 files should also be elaborated before publication.

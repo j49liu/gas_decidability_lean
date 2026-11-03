@@ -34,7 +34,10 @@ now supplies their source-hardness hypothesis.
 `stability_formalization_companion.tex` explains the broader ordinary-time
 selector, explicit Fourier bounds and printed-gain GAS construction,
 degree-input and joint dimension-and-odd-degree-input languages, polynomial
-GAS/LAS hardness, and the full halting-to-HLS reduction. Its rendered PDF is
+GAS/LAS hardness for both bounded and exact degree, and the full halting-to-HLS
+reduction. The exact-degree section follows the revised Corollary 11.2:
+two auxiliary coordinates prescribe any degree at least three, including
+even degrees. Its rendered PDF is
 `stability_formalization_companion.pdf`.
 
 The HLS source reduction and its cubic/cofinal hardness consequences are

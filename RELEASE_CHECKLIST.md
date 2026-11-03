@@ -24,7 +24,7 @@ optional follow-up steps for citation metadata and signed releases.
 - [x] License the formalization under the Apache License, Version 2.0.
 - [x] Link the accompanying paper, arXiv:2610.12434, from the README.
 
-## Stability extension
+## Stability extension (2026-10-31)
 
 - [x] Preserve the 837 published `HGAS` modules and pinned dependencies.
 - [x] Import all 251 added modules from `Stability.lean`.
@@ -34,6 +34,20 @@ optional follow-up steps for citation metadata and signed releases.
   `scripts/StabilityRegression.lean`.
 - [x] Extend the import checker to both roots and report shared legacy dependencies.
 - [x] Build both libraries and run both axiom audits and the Stability regressions.
+
+## Exact-degree extension (2026-11-03)
+
+- [x] Preserve the published HGAS library and both bounded-degree languages.
+- [x] Formalize the paper's planar factor for every degree at least three.
+- [x] Prove exact degree after decoding, including the malformed-input branch.
+- [x] Prove GAS/LAS hardness at the cubic dimension threshold plus two.
+- [x] Import all five new modules; check the 256-module Stability closure.
+- [x] Audit 484 Stability declarations and the 29 preserved release declarations.
+- [x] Check normalization, cancellation, malformed inputs, and even exact degree.
+- [x] Independently review the theorem statements, proof, and coverage notes.
+- [x] Build both public roots and regenerate the stability companion PDF.
+- [x] Directly elaborate all 41 legacy modules and all five new modules
+  with warnings treated as errors.
 
 ## Optional follow-up requiring an author decision or credential
 

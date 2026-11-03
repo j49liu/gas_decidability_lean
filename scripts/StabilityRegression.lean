@@ -5,6 +5,99 @@ kernel-checked examples, including normalization and malformed inputs. -/
 
 open HGAS Stability
 
+-- Exact degree is also invariant under normalization and cancellation.
+example (n d : ℕ) (F : PolynomialFieldCode n) :
+    PGASExactQ n d (fun i ↦ PolynomialCode.normalize (F i)) ↔ PGASExactQ n d F :=
+  pgasExactQ_iff_of_decode_eq (fun i ↦ PolynomialCode.decode_normalize (F i))
+
+example (n d : ℕ) (F : PolynomialFieldCode n) :
+    PLASExactQ n d (fun i ↦ PolynomialCode.normalize (F i)) ↔ PLASExactQ n d F :=
+  plasExactQ_iff_of_decode_eq (fun i ↦ PolynomialCode.decode_normalize (F i))
+
+example (n d : ℕ) (F G : PolynomialFieldCode n) :
+    PGASExactQ n d
+        (fun i ↦ PolynomialCode.add (F i)
+          (PolynomialCode.add (G i) (PolynomialCode.neg (G i)))) ↔
+      PGASExactQ n d F := by
+  apply pgasExactQ_iff_of_decode_eq
+  intro i
+  simp
+
+example (n d : ℕ) (F G : PolynomialFieldCode n) :
+    PLASExactQ n d
+        (fun i ↦ PolynomialCode.add (F i)
+          (PolynomialCode.add (G i) (PolynomialCode.neg (G i)))) ↔
+      PLASExactQ n d F := by
+  apply plasExactQ_iff_of_decode_eq
+  intro i
+  simp
+
+-- A cubic upper bound does not imply exact degree four.
+example (n : ℕ) (F : PolynomialFieldCode n)
+    (hF : ∀ i, (PolynomialCode.decode (F i)).totalDegree ≤ 3) :
+    ¬ PolynomialFieldExactDegree n 4 F := by
+  rintro ⟨_, i, hi⟩
+  have := hF i
+  omega
+
+-- No zero-dimensional field has a coordinate witnessing exact degree.
+example (d : ℕ) (F : PolynomialFieldCode 0) :
+    ¬ PolynomialFieldExactDegree 0 d F := by
+  rintro ⟨_, i, _⟩
+  exact Fin.elim0 i
+
+-- The factor is GAS for cubic, even, and higher odd degrees.
+example : GloballyAsymptoticallyStable (degreeCarrier 3) 0 :=
+  degreeCarrier_gas 3 (by decide)
+example : GloballyAsymptoticallyStable (degreeCarrier 4) 0 :=
+  degreeCarrier_gas 4 (by decide)
+example : GloballyAsymptoticallyStable (degreeCarrier 5) 0 :=
+  degreeCarrier_gas 5 (by decide)
+
+-- Even a malformed constant source produces exact target degree four.
+example : PolynomialFieldExactDegree 3 4
+    (cubicToExactPolynomialCode 1 4 (fun _ ↦ PolynomialCode.one)) :=
+  cubicToExactPolynomialCode_exactDegree 1 4 _ (by decide)
+
+example : ¬ PGASExactQ 3 4
+    (cubicToExactPolynomialCode 1 4 (fun _ ↦ PolynomialCode.one)) := by
+  rw [← cubicToExactPolynomialCode_correct (by decide) (by decide)]
+  intro h
+  have hbad : PolynomialFieldCode.homogeneous 3 (fun _ : Fin 1 ↦ PolynomialCode.one) ≠
+      true := by decide
+  exact hbad h.1
+
+example : ¬ PLASExactQ 3 4
+    (cubicToExactPolynomialCode 1 4 (fun _ ↦ PolynomialCode.one)) := by
+  rw [← cubicToExactPolynomialCode_correct_las (by decide) (by decide)]
+  intro h
+  have hbad : PolynomialFieldCode.homogeneous 3 (fun _ : Fin 1 ↦ PolynomialCode.one) ≠
+      true := by decide
+  exact hbad h.1
+
+-- A genuine zero source also stays negative after the exact-degree extension.
+example : ¬ PGASExactQ 3 4
+    (ExactDegreeCode.appendDegreeCarrierCode 1 4 (Veronese.zeroPolynomialFieldCode 1)) := by
+  rw [ExactDegreeCode.appendDegreeCarrierCode_pgasExactQ_iff 1 4 _ (by decide)
+    (by intro i; simp [Veronese.zeroPolynomialFieldCode])]
+  exact zeroPolynomialFieldCode_not_pgasQ (by decide) 3
+
+example : ¬ PLASExactQ 3 4
+    (ExactDegreeCode.appendDegreeCarrierCode 1 4 (Veronese.zeroPolynomialFieldCode 1)) := by
+  rw [ExactDegreeCode.appendDegreeCarrierCode_plasExactQ_iff 1 4 _ (by decide)
+    (by intro i; simp [Veronese.zeroPolynomialFieldCode])]
+  exact zeroPolynomialFieldCode_not_plasQ (by decide) 3
+
+-- Hardness uses the raised threshold and includes exact even degree.
+example (n : ℕ) (hn : exactPolynomialDimensionThreshold ≤ n) :
+    ManyOneHard (PGASExactQ n 3) := pgasExactQ_manyOneHard n 3 hn (by decide)
+example (n : ℕ) (hn : exactPolynomialDimensionThreshold ≤ n) :
+    ManyOneHard (PGASExactQ n 4) := pgasExactQ_manyOneHard n 4 hn (by decide)
+example (n : ℕ) (hn : exactPolynomialDimensionThreshold ≤ n) :
+    ManyOneHard (PLASExactQ n 4) := plasExactQ_manyOneHard n 4 hn (by decide)
+example (n : ℕ) (hn : exactPolynomialDimensionThreshold ≤ n) :
+    ManyOneHard (PLASExactQ n 5) := plasExactQ_manyOneHard n 5 hn (by decide)
+
 -- Normalizing a sparse code leaves both decoded-degree languages unchanged.
 example (n d : ℕ) (F : PolynomialFieldCode n) :
     PGASQ n d (fun i ↦ PolynomialCode.normalize (F i)) ↔ PGASQ n d F := by

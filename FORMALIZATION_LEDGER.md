@@ -1,6 +1,6 @@
 # Formalization ledger
 
-Last updated: 2026-10-31
+Last updated: 2026-11-03
 
 Current status: **the unconditional augmented fixed-pair GAS theorem, its
 cofinal cubic consequence, and the fixed-parameter GAS/HLS cubicization
@@ -33,6 +33,60 @@ preceding 824-module formalization. The additive HLS and shadowing extension
 is documented in `docs/cubicization_hls_formalization_companion.tex`. This
 ledger, rather than either companion alone, is the authoritative coverage
 record for the published 837-module library and the additions below.
+
+## Exact-degree polynomial GAS and LAS
+
+Added for the revised Corollary 11.2 at Overleaf commit `1fed6c4`
+(`new Main Document/sec11_proof_of_main.tex`). This correspondence concerns
+that corollary; the baseline below still records the scope of the earlier
+extension. No published `HGAS` module or bounded-degree theorem is changed.
+
+- `Computability/ExactPolynomialLanguages.lean` defines `PGASExactQ` and
+  `PLASExactQ`. Every decoded coordinate has total degree at most `d`, and
+  at least one has degree equal to `d`. Cancellation and normalization do
+  not affect these languages. The earlier `PGASQ` and `PLASQ` retain their
+  degree-at-most meaning.
+- `Dynamics/DegreeCarrier.lean` proves GAS of the literal paper factor
+  `degreeCarrier d (w,z) = (-w^3, -z^3 + w^d)` for every `d >= 3`.
+  The proof uses the coercive global Lyapunov function
+  `w^2 + w^(4*(d-3)+2) + z^2`, instead of first bounding trajectories and
+  then using a local quadratic function. Its derivative is at most
+  `-w^4-z^4`. This proves forward completeness as well as stability and
+  attraction. `degreeCarrier_quadratic_derivative_le` also verifies the
+  manuscript's local quadratic estimate on `|w| <= 1`.
+- `Dynamics/ProductStability.lean` proves reusable product and continuous
+  linear conjugacy results for local attraction and LAS, with existence
+  included. The GAS product and conjugacy results are reused unchanged.
+- `Computability/ExactDegreePolynomialCode.lean` gives a primitive-recursive
+  compiler adjoining that factor, proves its literal realization, and
+  proves exact decoded degree `d` whenever the source has degree at most
+  three. The coefficient of the new monomial `w^d` is one, including when
+  `d = 3`; it cannot cancel against `-z^3`.
+- `Computability/ExactPolynomialStability.lean` composes this compiler with
+  the existing cubic-input validator. The new threshold is the published
+  cubic HGAS threshold plus two. For every fixed dimension at least this
+  threshold and every fixed `d >= 3`, including even `d`, `PGASExactQ` and
+  `PLASExactQ` are many-one hard, undecidable, and have non-r.e. complements.
+  No recursive-enumerability claim is made for either language.
+
+The total code reduction sends invalid homogeneous-cubic source codes to a
+zero source field before adjoining the planar factor. The paper instead
+uses the identity field. Both are negative GAS and LAS instances in positive
+source dimension; the Lean proof checks this branch explicitly. This
+fallback is not a reduction to Lyapunov stability, and no exact-degree
+general-polynomial HLS endpoint is asserted here.
+
+Validation on 2026-11-03: both public roots build (4,985 jobs); all 256
+`Stability` modules are root-reachable, while the HGAS 837/796/41 counts
+are unchanged. The updated Stability audit checks 484 declarations and
+the preserved release audit checks 29; their only axiom dependencies are
+`propext`, `Classical.choice`, and `Quot.sound`. No project-namespaced
+axioms occur. The warning-as-error regression script passes, including
+exact degrees three, four, and five, cancellation, normalization, malformed
+sources, and zero-dimensional degree predicates. All 41 catalogued legacy
+modules and all five new modules also pass direct warning-as-error
+elaboration. The companion PDF has been regenerated. Independent source
+and prose reviews found no correctness issues.
 
 ## Further stability results
 
@@ -744,7 +798,7 @@ lake build HGAS Stability
 
 It succeeds for both public roots. The preserved `HGAS` tree has 837 modules:
 796 in the `HGAS.lean` closure and 41 independently elaborated modules
-outside that root. All 251 `Stability` modules belong to its public closure,
+outside that root. All 256 `Stability` modules belong to its public closure,
 which also uses items 33 and 35 of the HGAS legacy catalog.
 
 The source audit
@@ -920,7 +974,8 @@ formalized verbatim.
 | Broader ordinary-time trajectory/test equivalence | **Exact** | Stated distinct-prime and nonzero-column hypotheses; arbitrary real growth order at least one |
 | Literal graph Fourier/primitive bounds and printed reward gap | **Exact** | Actual Haar coefficients, computable least-denominator gain, and constructed compact graph measure |
 | Theta, drift, compactification, and wrapper chain | **Equivalent or alternative** | Distributed formal analogues; exact code-level GAS endpoints |
-| Bounded-degree polynomial GAS and LAS hardness | **Exact** | At least cubic degree and sufficiently large fixed dimension; no RE membership claim |
+| Exact-degree polynomial GAS and LAS hardness (revised Corollary 11.2) | **Exact statement; alternative Lyapunov estimate** | Every exact degree `d >= 3`, including even degrees; cubic dimension threshold plus two; no RE membership claim |
+| Preserved bounded-degree polynomial GAS and LAS hardness | **Exact** | Degree bound at least three and sufficiently large fixed dimension; no RE membership claim |
 | Compiler uniformity in varying `(n,k)` | **Not formalized** | The proved code maps are computable separately for fixed `(n,k)` |
 | Maximal-solution/global-trajectory bridge | **Not formalized** | Polynomial regularity and uniqueness support the representation, but no standalone API theorem is exported |
 | Raw degree-input and joint dimension-and-odd-degree-input languages | **Exact, scoped** | Explicit oddness and raw-shape conventions; the joint language admits dimension zero |
